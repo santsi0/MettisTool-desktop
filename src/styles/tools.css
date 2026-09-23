@@ -1,0 +1,155 @@
+/* MettisTool — työkalumoottorin tyylit (vaihe 1:n moottori, rajattu .tool-host-alueeseen) */
+
+.tool-host .empty{padding:16px 12px; text-align:center; color:var(--tx-3); font-size:12px}
+.tool-host .empty .ic{width:20px; height:20px; margin-bottom:6px; color:var(--bd-2)}
+.tool-host .empty b{display:block; color:var(--tx-2); font-weight:500; margin-bottom:3px; font-size:12.5px}
+.tool-host .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; height:28px; padding:0 11px;
+  background:var(--panel-2); border:1px solid var(--bd); border-radius:var(--r); color:var(--tx-2);
+  font-size:12px; cursor:pointer; white-space:nowrap;
+  transition:color var(--t),background var(--t),border-color var(--t),transform 80ms;}
+.tool-host .btn:hover{color:var(--tx); border-color:var(--bd-2); background:var(--panel-3)}
+.tool-host .btn:active{transform:translateY(1px)}
+.tool-host .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+.tool-host .btn .ic{width:13px; height:13px}
+.tool-host .btn-pri{background:rgba(var(--acc-rgb),.14); border-color:rgba(var(--acc-rgb),.4); color:var(--acc-2)}
+.tool-host .btn-pri:hover{background:rgba(var(--acc-rgb),.2); border-color:rgba(var(--acc-rgb),.6); color:var(--acc-2)}
+.tool-host .btn-gh{background:transparent; border-color:transparent}
+.tool-host .btn-gh:hover{background:var(--panel-3); border-color:var(--bd)}
+.tool-host .btn-sm{height:24px; padding:0 8px; font-size:11.5px}
+.tool-host .btn.on{color:var(--acc); border-color:rgba(var(--acc-rgb),.4); background:rgba(var(--acc-rgb),.1)}
+.tool-host .btn-row{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+/* Kentät */
+.tool-host .field{display:flex; flex-direction:column; gap:5px; min-width:0}
+.tool-host .field>label{font:600 10px/1 var(--sans); letter-spacing:.09em; text-transform:uppercase; color:var(--tx-3)}
+.tool-host .field .hint{font-size:11px; color:var(--tx-3)}
+.tool-host .ctl{height:30px; padding:0 9px; background:var(--bg-2); border:1px solid var(--bd); border-radius:var(--r);
+  color:var(--tx); font-size:12.5px; width:100%; min-width:0; outline:none;
+  transition:border-color var(--t),background var(--t);}
+.tool-host .ctl:hover{border-color:var(--bd-2)}
+.tool-host .ctl:focus{border-color:var(--acc); background:var(--panel-2); box-shadow:0 0 0 2px rgba(var(--acc-rgb),.12)}
+.tool-host textarea.ctl{height:auto; padding:8px 9px; resize:vertical; font-family:var(--mono); font-size:12px; line-height:1.55}
+.tool-host select.ctl{appearance:none; cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--tx-3) 50%),linear-gradient(135deg,var(--tx-3) 50%,transparent 50%);
+  background-position:calc(100% - 13px) 13px,calc(100% - 9px) 13px; background-size:4px 4px,4px 4px;
+  background-repeat:no-repeat; padding-right:26px}
+.tool-host input[type=color].ctl{padding:2px; cursor:pointer; height:30px}
+.tool-host input[type=range].ctl{height:30px; padding:0; background:none; border:0; accent-color:var(--acc); cursor:pointer}
+.tool-host .ctl.mono{font-family:var(--mono)}
+.tool-host .fields{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px}
+.tool-host .fields.c2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.tool-host .check{display:flex; align-items:center; gap:8px; height:30px; cursor:pointer; font-size:12.5px; color:var(--tx-2)}
+.tool-host .check input{appearance:none; width:15px; height:15px; border:1px solid var(--bd-2); border-radius:3px;
+  background:var(--bg-2); cursor:pointer; display:grid; place-items:center; transition:all var(--t)}
+.tool-host .check input:checked{background:var(--acc); border-color:var(--acc)}
+.tool-host .check input:checked::after{content:""; width:8px; height:4px; border:2px solid #fff; border-top:0; border-right:0;
+  transform:rotate(-45deg) translate(0,-1px)}
+.tool-host .seg-ctl{display:flex; gap:2px; padding:2px; background:var(--bg-2); border:1px solid var(--bd); border-radius:var(--r)}
+.tool-host .seg-ctl button{flex:1; height:24px; padding:0 9px; background:none; border:0; border-radius:3px; color:var(--tx-2);
+  font-size:11.5px; cursor:pointer; transition:all var(--t); white-space:nowrap}
+.tool-host .seg-ctl button:hover{color:var(--tx); background:var(--panel-3)}
+.tool-host .seg-ctl button.on{background:rgba(var(--acc-rgb),.15); color:var(--acc-2)}
+/* Editorit */
+.tool-host .split{display:grid; grid-template-columns:minmax(0,1fr) 5px minmax(0,1fr); gap:0; align-items:stretch}
+.tool-host .split.stack{grid-template-columns:minmax(0,1fr); gap:11px}
+.tool-host .split.stack .gutterbar{display:none}
+.tool-host .gutterbar{cursor:col-resize; position:relative}
+.tool-host .gutterbar::after{content:""; position:absolute; inset:0 2px; background:var(--bd); border-radius:2px; opacity:0; transition:opacity var(--t)}
+.tool-host .gutterbar:hover::after{opacity:1}
+.tool-host .ed{display:flex; flex-direction:column; min-width:0; background:var(--panel); border:1px solid var(--bd); border-radius:var(--r2); overflow:hidden}
+.tool-host .ed-head{display:flex; align-items:center; gap:8px; height:31px; padding:0 8px 0 11px; border-bottom:1px solid var(--bd)}
+.tool-host .ed-head .lbl{color:var(--tx-2)}
+.tool-host .ed-head .acts{margin-left:auto; display:flex; gap:3px}
+.tool-host .ed-area{position:relative; display:flex; min-height:0; flex:1}
+.tool-host .ed-nums{flex:none; width:42px; padding:9px 7px 9px 0; text-align:right; user-select:none; overflow:hidden;
+  font:400 12px/1.55 var(--mono); color:var(--tx-3); background:var(--panel-2); border-right:1px solid var(--bd-soft);
+  white-space:pre;}
+.tool-host .ed-in, .tool-host .ed-out{flex:1; min-width:0; margin:0; padding:9px 11px; background:transparent; border:0; outline:none;
+  font:400 12px/1.55 var(--mono); color:var(--tx); resize:none; overflow:auto;
+  tab-size:2; white-space:pre; word-wrap:normal;}
+.tool-host .ed-in::placeholder{color:var(--tx-3)}
+.tool-host .ed.wrap-on .ed-in, .tool-host .ed.wrap-on .ed-out{white-space:pre-wrap; word-break:break-word}
+.tool-host .ed-out{user-select:text}
+.tool-host .ed-out.empty-state{display:grid; place-items:center; color:var(--tx-3); font-family:var(--sans); font-size:12px; text-align:center}
+.tool-host .ed-drop{position:absolute; inset:0; display:none; place-items:center; background:rgba(var(--acc-rgb),.07);
+  border:1px dashed var(--acc); border-radius:var(--r); color:var(--acc); font-size:12.5px; z-index:5}
+.tool-host .ed.dragging .ed-drop{display:grid}
+.tool-host .statusbar{display:flex; align-items:center; gap:14px; padding:7px 12px; margin-top:11px;
+  background:var(--panel); border:1px solid var(--bd); border-radius:var(--r); font:400 11px/1 var(--mono); color:var(--tx-3);}
+.tool-host .statusbar .st{display:flex; align-items:center; gap:6px}
+.tool-host .statusbar .st b{color:var(--tx-2); font-weight:400}
+.tool-host .statusbar .st.ok{color:var(--ok)}
+.tool-host .statusbar .st.err{color:var(--err)}
+.tool-host .statusbar .st.warn{color:var(--warn)}
+.tool-host .statusbar .lbl{font-family:var(--sans)}
+/* Tulostaulukot */
+.tool-host .res{display:flex; flex-direction:column; border:1px solid var(--bd); border-radius:var(--r2); background:var(--panel); overflow:hidden}
+.tool-host .res-row{display:flex; align-items:center; gap:12px; padding:8px 12px; border-bottom:1px solid var(--bd-soft); font-size:12.5px}
+.tool-host .res-row:last-child{border-bottom:0}
+.tool-host .res-row .k{flex:none; width:210px; color:var(--tx-2); display:flex; align-items:center; gap:7px}
+.tool-host .res-row .v{flex:1; min-width:0; font-family:var(--mono); font-size:12.5px; color:var(--tx); word-break:break-word}
+.tool-host .res-row.big .v{font-size:17px; font-weight:500; color:var(--acc-2)}
+.tool-host .res-row.sub .v{color:var(--tx-2)}
+.tool-host .res-row .copy-mini{opacity:0; flex:none}
+.tool-host .res-row:hover .copy-mini{opacity:1}
+.tool-host table.tbl{width:100%; border-collapse:collapse; font-size:12px}
+.tool-host table.tbl th{text-align:left; font:600 10px/1 var(--sans); letter-spacing:.09em; text-transform:uppercase;
+  color:var(--tx-3); padding:8px 10px; border-bottom:1px solid var(--bd); background:var(--panel-2); position:sticky; top:0}
+.tool-host table.tbl td{padding:6px 10px; border-bottom:1px solid var(--bd-soft); font-family:var(--mono); font-size:12px; vertical-align:top}
+.tool-host table.tbl tr:last-child td{border-bottom:0}
+.tool-host table.tbl tr:hover td{background:var(--panel-2)}
+.tool-host table.tbl td.n{font-family:var(--sans)}
+.tool-host .tbl-wrap{max-height:440px; overflow:auto; border:1px solid var(--bd); border-radius:var(--r2); background:var(--panel)}
+.tool-host .note{display:flex; gap:9px; padding:9px 11px; border-radius:var(--r); font-size:12px; line-height:1.5;
+  border:1px solid var(--bd); background:var(--panel-2); color:var(--tx-2)}
+.tool-host .note .ic{width:14px; height:14px; flex:none; margin-top:1px; color:var(--tx-3)}
+.tool-host .note.info{border-color:rgba(76,141,217,.3); background:rgba(76,141,217,.07)}
+.tool-host .note.info .ic{color:var(--info)}
+.tool-host .note.warn{border-color:rgba(217,164,65,.3); background:rgba(217,164,65,.07)}
+.tool-host .note.warn .ic{color:var(--warn)}
+.tool-host .note.err{border-color:rgba(224,82,96,.3); background:rgba(224,82,96,.07)}
+.tool-host .note.err .ic{color:var(--err)}
+.tool-host .note.ok{border-color:rgba(63,179,127,.3); background:rgba(63,179,127,.07)}
+.tool-host .note.ok .ic{color:var(--ok)}
+.tool-host .drop{display:grid; place-items:center; gap:7px; padding:26px; border:1px dashed var(--bd-2); border-radius:var(--r2);
+  background:var(--panel-2); color:var(--tx-3); font-size:12.5px; cursor:pointer; text-align:center;
+  transition:border-color var(--t),background var(--t),color var(--t);}
+.tool-host .drop:hover, .tool-host .drop.over{border-color:var(--acc); color:var(--acc); background:rgba(var(--acc-rgb),.05)}
+.tool-host .drop .ic{width:22px; height:22px}
+.tool-host .drop b{color:var(--tx-2); font-weight:500}
+.tool-host .grid-auto{display:grid; gap:11px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.tool-host .swatch{height:56px; border-radius:var(--r); border:1px solid var(--bd); cursor:pointer; position:relative; overflow:hidden}
+.tool-host .swatch span{position:absolute; left:0; right:0; bottom:0; padding:3px 6px; font:400 10.5px/1.3 var(--mono);
+  background:rgba(0,0,0,.55); color:#fff; backdrop-filter:blur(2px)}
+.tool-host .preview-box{border:1px solid var(--bd); border-radius:var(--r2); background:
+  repeating-conic-gradient(var(--panel-2) 0% 25%,var(--panel-3) 0% 50%) 50%/16px 16px; padding:16px;
+  display:grid; place-items:center; min-height:130px; overflow:auto}
+/* Syntaksiväritys */
+.tool-host .tk-key{color:var(--acc-2)}
+.tool-host .tk-str{color:#7FBF8C}
+.tool-host .tk-num{color:#D9A441}
+.tool-host .tk-bool{color:#4C8DD9}
+.tool-host .tk-null{color:var(--tx-3)}
+.tool-host .tk-punc{color:var(--tx-2)}
+.tool-host .tk-com{color:var(--tx-3); font-style:italic}
+.tool-host .tk-kw{color:#B98BFF}
+.tool-host .tk-tag{color:var(--acc-2)}
+.tool-host .tk-attr{color:#D9A441}
+[data-theme="light"] .tool-host .tk-str{color:#217A3B}
+[data-theme="light"] .tool-host .tk-num{color:#9A6A00}
+[data-theme="light"] .tool-host .tk-kw{color:#7A3CC4}
+[data-theme="light"] .tool-host .tk-bool{color:#1F5FB0}
+
+.tool-host .panel{background:var(--panel); border:1px solid var(--bd); border-radius:var(--r2)}
+.tool-host .panel-head{display:flex; align-items:center; gap:8px; height:32px; padding:0 11px;
+  border-bottom:1px solid var(--bd); color:var(--tx-2);}
+.tool-host .panel-head .lbl{color:var(--tx-2)}
+.tool-host .panel-head .ic{width:13px; height:13px; color:var(--acc)}
+.tool-host .panel-body{padding:11px}
+.tool-host .panel-foot{border-top:1px solid var(--bd); padding:7px 11px; display:flex; align-items:center; gap:10px}
+.tool-host .sect-head{display:flex; align-items:center; gap:8px; margin:0 0 9px}
+.tool-host .sect-head .lbl{color:var(--tx-2)}
+.tool-host .sect-head .ic{width:13px; height:13px; color:var(--acc)}
+.tool-host .sect-head a{font-size:11px; color:var(--tx-3); display:flex; align-items:center; gap:3px}
+.tool-host .sect-head a:hover{color:var(--acc)}
+.tool-host .chip{font:600 9.5px/1 var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--tx-3);
+  border:1px solid var(--bd); border-radius:3px; padding:4px 6px; background:var(--bg-2)}

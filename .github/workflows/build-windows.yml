@@ -1,0 +1,97 @@
+name: Rakenna Windows-sovellus
+
+# Tämä työnkulku kääntää MettisToolin oikealla Windows-koneella GitHubin pilvessä
+# ja tuottaa kaksi tiedostoa:
+#   MettisTool.exe        — itsenäinen sovellus
+#   MettisTool-Setup.exe  — asennusohjelma
+#
+# Käynnistyy automaattisesti kun työnnät version-tagin (esim. v1.0.0),
+# tai manuaalisesti välilehdeltä Actions → Rakenna Windows-sovellus → Run workflow.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Käännä ja paketoi
+    runs-on: windows-latest
+
+    steps:
+      - name: Hae lähdekoodi
+        uses: actions/checkout@v4
+
+      - name: Asenna Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Asenna Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Välimuistita Rust-käännös
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Asenna riippuvuudet
+        run: npm install
+
+      - name: Tarkista TypeScript
+        run: npm run typecheck
+
+      - name: Tarkista Rustin muotoilu ja lint
+        working-directory: src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+        continue-on-error: true
+
+      - name: Käännä sovellus ja asennuspaketti
+        run: npm run tauri build
+
+      - name: Nimeä tiedostot selkeästi
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-windows | Out-Null
+          Copy-Item "src-tauri/target/release/MettisTool.exe" "dist-windows/MettisTool.exe"
+          $setup = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $setup) { throw "Asennuspakettia ei löytynyt kansiosta bundle/nsis" }
+          Copy-Item $setup.FullName "dist-windows/MettisTool-Setup.exe"
+          Get-ChildItem dist-windows | Format-Table Name, Length
+
+      - name: Laske tarkistussummat
+        shell: pwsh
+        run: |
+          Get-ChildItem dist-windows -Filter *.exe | ForEach-Object {
+            $h = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($h.Hash.ToLower())  $($_.Name)"
+          } | Set-Content dist-windows/SHA256SUMS.txt
+          Get-Content dist-windows/SHA256SUMS.txt
+
+      - name: Lataa tiedostot talteen
+        uses: actions/upload-artifact@v4
+        with:
+          name: MettisTool-Windows
+          path: dist-windows/*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Julkaise Release (vain version-tagilla)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MettisTool ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist-windows/MettisTool.exe
+            dist-windows/MettisTool-Setup.exe
+            dist-windows/SHA256SUMS.txt

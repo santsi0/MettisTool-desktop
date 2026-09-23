@@ -1,0 +1,70 @@
+[package]
+name = "mettistool"
+version = "1.0.0"
+description = "MettisTool — Professional Utility Suite"
+authors = ["MettisTool"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+# Tauri 2 -käytäntö: sovelluslogiikka kirjastossa, main.rs vain käynnistää sen.
+name = "mettistool_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+argon2 = { version = "0.5", features = ["std"] }
+rand = "0.8"
+sha2 = "0.10"
+sha1 = "0.10"
+hmac = "0.12"
+subtle = "2"
+base64 = "0.22"
+zeroize = { version = "1", features = ["derive"] }
+
+chrono = { version = "0.4", features = ["clock", "serde"] }
+url = "2"
+thiserror = "1"
+log = "0.4"
+
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "charset",
+    "http2",
+] }
+
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+tauri-plugin-autostart = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["linux-native"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+tauri-plugin-autostart = "2"
+
+[features]
+# Tauri käyttää tätä custom-protokollan valintaan.
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

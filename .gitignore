@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-windows/
+src-tauri/target/
+src-tauri/gen/
+
+# Salaisuudet eivät koskaan versionhallintaan
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

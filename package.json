@@ -1,0 +1,40 @@
+{
+  "name": "mettistool",
+  "productName": "MettisTool",
+  "version": "1.0.0",
+  "description": "MettisTool — Professional Utility Suite. Turvallinen työpöytäsovellus, jossa yli 220 työkalua paikalliseen käsittelyyn.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "start": "tauri dev",
+    "build:win": "tauri build",
+    "build:win:debug": "tauri build --debug",
+    "icons": "tauri icon assets/icon-source.png"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-autostart": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.1",
+    "@tauri-apps/plugin-notification": "^2.0.1",
+    "@tauri-apps/plugin-opener": "^2.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}
