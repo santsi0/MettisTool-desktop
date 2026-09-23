@@ -1,3 +1,4 @@
+﻿import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -5,6 +6,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  resolve: {
+    // Sama alias kuin tsconfig.json:ssa — TypeScriptin paths ei ohjaa bundleria.
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
+  },
   server: {
     port: 5173,
     strictPort: true,
@@ -19,10 +24,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('src/tools/modules')) return 'tools';
-          if (id.includes('node_modules')) return 'vendor';
-          return undefined;
+        manualChunks(id: string) {
+          return id.includes('node_modules') ? 'vendor' : undefined;
         }
       }
     }
