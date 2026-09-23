@@ -123,9 +123,13 @@ Windows-koneella eikä vaadi sinulta mitään asennuksia.
    `MettisTool-Setup.exe`, `MettisTool.exe` ja `SHA256SUMS.txt`. Artefaktit
    vanhenevat 30 päivässä.
 
-Kun työnnät version-tagin, sama työnkulku julkaisee **asennusohjelman ja sen
-tarkistussumman** Release-sivulle. Asennukseton `MettisTool.exe` jää vain
-Actions-artefaktiin, jotta julkaistavana on yksi selkeä tiedosto:
+Kun työnnät version-tagin, sama työnkulku julkaisee Release-sivulle **yhden
+tiedoston: `MettisTool-Setup.exe`**, joka latautuu suoraan ilman pakkausta.
+SHA-256-tarkistussumma kirjoitetaan julkaisutiedotteeseen. Asennukseton
+`MettisTool.exe` jää vain Actions-artefaktiin.
+
+(Actions-artefaktit latautuvat aina zip-pakattuna — se on GitHubin toiminta,
+johon työnkulku ei voi vaikuttaa. Release-liitetiedostot latautuvat sellaisenaan.)
 
 ```bash
 git tag v1.0.0

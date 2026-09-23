@@ -68,11 +68,13 @@ jobs:
           Get-ChildItem dist-windows | Format-Table Name, Length
 
       - name: Laske asennuspaketin tarkistussumma
+        id: sum
         shell: pwsh
         run: |
-          $h = Get-FileHash dist-windows/MettisTool-Setup.exe -Algorithm SHA256
-          "$($h.Hash.ToLower())  MettisTool-Setup.exe" | Set-Content dist-windows/SHA256SUMS.txt
-          Get-Content dist-windows/SHA256SUMS.txt
+          $h = (Get-FileHash dist-windows/MettisTool-Setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$h  MettisTool-Setup.exe" | Set-Content dist-windows/SHA256SUMS.txt
+          "sha256=$h" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "SHA-256: $h"
 
       - name: Lataa tiedostot talteen
         uses: actions/upload-artifact@v7
@@ -90,6 +92,23 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: |
-            dist-windows/MettisTool-Setup.exe
-            dist-windows/SHA256SUMS.txt
+          files: dist-windows/MettisTool-Setup.exe
+          body: |
+            ### Lataa
+
+            **MettisTool-Setup.exe** — Windows 10 (1809) tai uudempi, 64-bittinen.
+            Asennus tehdään käyttäjäkohtaisesti, joten järjestelmänvalvojan
+            oikeuksia ei tarvita.
+
+            Tarkistussumma (SHA-256):
+
+            ```
+            ${{ steps.sum.outputs.sha256 }}  MettisTool-Setup.exe
+            ```
+
+            ```powershell
+            Get-FileHash .\MettisTool-Setup.exe -Algorithm SHA256
+            ```
+
+            Sovellusta ei ole koodiallekirjoitettu, joten Windows SmartScreen voi
+            varoittaa ensimmäisellä ajolla: *Lisätietoja → Suorita joka tapauksessa*.
