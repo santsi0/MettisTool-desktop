@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon-source.png" width="112" height="112" alt="MettisTool">
+<img src="assets/logo.png" width="128" height="128" alt="MettisTool">
 
 # MettisTool
 
