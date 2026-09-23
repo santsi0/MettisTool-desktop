@@ -33,7 +33,6 @@ sha1 = "0.10"
 hmac = "0.12"
 subtle = "2"
 base64 = "0.22"
-zeroize = { version = "1", features = ["derive"] }
 
 chrono = { version = "0.4", features = ["clock", "serde"] }
 url = "2"

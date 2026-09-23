@@ -273,7 +273,7 @@ fn load_target(state: &AppState, user_id: i64) -> AppResult<auth::UserRow> {
     auth::find_by_id(&state.db, user_id)?.ok_or(AppError::NotFound)
 }
 
-fn ensure_can_manage(state: &AppState, ctx: &crate::state::AuthContext, target: &auth::UserRow) -> AppResult<()> {
+fn ensure_can_manage(ctx: &crate::state::AuthContext, target: &auth::UserRow) -> AppResult<()> {
     if !rbac::can_manage_user(&ctx.role, ctx.user_id, &target.role, target.id) {
         return Err(AppError::Forbidden);
     }
@@ -284,7 +284,7 @@ fn ensure_can_manage(state: &AppState, ctx: &crate::state::AuthContext, target: 
 pub fn set_user_role(state: State<'_, AppState>, user_id: i64, role: String) -> AppResult<PublicUser> {
     let ctx = state.require_permission("MANAGE_ROLES")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
 
     if !rbac::can_assign_role(&ctx.role, &role) {
         return Err(AppError::Forbidden);
@@ -324,7 +324,7 @@ pub fn set_user_status(
 ) -> AppResult<PublicUser> {
     let ctx = state.require_permission("EDIT_USERS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
     if !enabled {
         rbac::ensure_not_last_owner(&state.db, user_id)?;
         if ctx.user_id == user_id {
@@ -361,7 +361,7 @@ pub fn set_user_status(
 pub fn set_user_lock(state: State<'_, AppState>, user_id: i64, locked: bool) -> AppResult<PublicUser> {
     let ctx = state.require_permission("EDIT_USERS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
 
     let until = if locked {
         Some(util::now() + settings::get_i64(&state.db, settings::LOCKOUT_MINUTES, 1, 10_080) * 60)
@@ -394,7 +394,7 @@ pub fn set_user_lock(state: State<'_, AppState>, user_id: i64, locked: bool) -> 
 pub fn verify_user_email(state: State<'_, AppState>, user_id: i64) -> AppResult<PublicUser> {
     let ctx = state.require_permission("EDIT_USERS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
 
     state.db.with(|c| {
         c.execute(
@@ -437,7 +437,7 @@ pub async fn admin_send_verification(state: State<'_, AppState>, user_id: i64) -
 pub async fn admin_reset_password(state: State<'_, AppState>, user_id: i64) -> AppResult<()> {
     let ctx = state.require_permission("RESET_PASSWORDS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
     if !email::is_configured(&state.db) {
         return Err(AppError::EmailNotConfigured);
     }
@@ -468,7 +468,7 @@ pub async fn admin_reset_password(state: State<'_, AppState>, user_id: i64) -> A
 pub fn force_password_change(state: State<'_, AppState>, user_id: i64) -> AppResult<PublicUser> {
     let ctx = state.require_permission("RESET_PASSWORDS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
 
     state.db.with(|c| {
         c.execute(
@@ -494,7 +494,7 @@ pub fn force_password_change(state: State<'_, AppState>, user_id: i64) -> AppRes
 pub fn revoke_user_sessions(state: State<'_, AppState>, user_id: i64) -> AppResult<usize> {
     let ctx = state.require_permission("EDIT_USERS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
     let n = auth::session::revoke_all(&state.db, user_id, None)?;
     audit::log(
         &state.db,
@@ -511,7 +511,7 @@ pub fn revoke_user_sessions(state: State<'_, AppState>, user_id: i64) -> AppResu
 pub fn delete_user(state: State<'_, AppState>, user_id: i64) -> AppResult<()> {
     let ctx = state.require_permission("DELETE_USERS")?;
     let target = load_target(&state, user_id)?;
-    ensure_can_manage(&state, &ctx, &target)?;
+    ensure_can_manage(&ctx, &target)?;
     rbac::ensure_not_last_owner(&state.db, user_id)?;
     if ctx.user_id == user_id {
         return Err(AppError::Conflict("cannot_delete_self".into()));

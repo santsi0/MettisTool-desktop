@@ -37,10 +37,13 @@ fn init_logging() {
         "error" => log::LevelFilter::Error,
         _ => log::LevelFilter::Info,
     };
-    let _ = log::set_boxed_logger(Box::new(SimpleLogger)).map(|()| log::set_max_level(filter));
+    let _ = log::set_logger(&LOGGER).map(|()| log::set_max_level(filter));
 }
 
 struct SimpleLogger;
+
+// Staattinen instanssi: log::set_logger ei vaadi alloc-ominaisuutta eikä varaa muistia.
+static LOGGER: SimpleLogger = SimpleLogger;
 
 impl log::Log for SimpleLogger {
     fn enabled(&self, _: &log::Metadata) -> bool {
