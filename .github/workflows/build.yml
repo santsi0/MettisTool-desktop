@@ -1,0 +1,174 @@
+name: Rakenna sovellus
+
+# Kääntää MettisToolin kolmelle alustalle GitHubin pilvessä.
+#
+#   Windows   MettisTool-Setup.exe     NSIS-asennusohjelma
+#   macOS     MettisTool.dmg           universaali (Apple Silicon + Intel)
+#   Linux     MettisTool.AppImage      toimii ilman asennusta
+#             MettisTool.deb           Debian ja Ubuntu
+#
+# Käynnistyy automaattisesti version-tagista (esim. v1.0.0) — jolloin
+# asennuspaketit julkaistaan Releases-sivulle — tai manuaalisesti:
+# Actions -> Rakenna sovellus -> Run workflow.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            args: --bundles nsis
+            rust-targets: ''
+          - name: macOS
+            os: macos-latest
+            args: --bundles dmg --target universal-apple-darwin
+            rust-targets: x86_64-apple-darwin
+          - name: Linux
+            # 22.04 tarkoituksella: AppImage toimii myös vanhemmilla jakeluilla.
+            os: ubuntu-22.04
+            args: --bundles appimage,deb
+            rust-targets: ''
+
+    steps:
+      - name: Hae lähdekoodi
+        uses: actions/checkout@v7
+
+      - name: Asenna Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Asenna Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Asenna Linuxin järjestelmäkirjastot
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            libssl-dev \
+            patchelf \
+            build-essential \
+            file
+
+      - name: Välimuistita Rust-käännös
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.name }}
+
+      - name: Asenna riippuvuudet
+        run: npm install
+
+      - name: Tarkista TypeScript
+        run: npm run typecheck
+
+      - name: Tarkista Rustin muotoilu ja lint
+        if: matrix.name == 'Linux'
+        working-directory: src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets
+        continue-on-error: true
+
+      - name: Käännä sovellus ja asennuspaketti
+        run: npm run tauri build -- ${{ matrix.args }}
+
+      - name: Kerää asennuspaketit
+        shell: bash
+        run: |
+          mkdir -p dist
+          pick() { ls $1 2>/dev/null | head -1; }
+          case "${{ matrix.name }}" in
+            Windows)
+              f=$(pick 'src-tauri/target/release/bundle/nsis/*-setup.exe')
+              [ -n "$f" ] || { echo "NSIS-asennuspakettia ei löytynyt"; exit 1; }
+              cp "$f" dist/MettisTool-Setup.exe
+              ;;
+            macOS)
+              f=$(pick 'src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg')
+              [ -n "$f" ] || { echo "DMG-pakettia ei löytynyt"; exit 1; }
+              cp "$f" dist/MettisTool.dmg
+              ;;
+            Linux)
+              f=$(pick 'src-tauri/target/release/bundle/appimage/*.AppImage')
+              [ -n "$f" ] || { echo "AppImagea ei löytynyt"; exit 1; }
+              cp "$f" dist/MettisTool.AppImage
+              f=$(pick 'src-tauri/target/release/bundle/deb/*.deb')
+              [ -n "$f" ] || { echo "deb-pakettia ei löytynyt"; exit 1; }
+              cp "$f" dist/MettisTool.deb
+              ;;
+          esac
+          ls -l dist
+
+      - name: Lataa tiedostot talteen
+        uses: actions/upload-artifact@v7
+        with:
+          name: MettisTool-${{ matrix.name }}
+          path: dist/*
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Julkaise
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hae käännetyt paketit
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Listaa julkaistavat tiedostot
+        run: ls -l dist
+
+      - name: Julkaise Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MettisTool ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            ### Lataa
+
+            | Käyttöjärjestelmä | Tiedosto |
+            | --- | --- |
+            | Windows 10 (1809) tai uudempi, 64-bit | **MettisTool-Setup.exe** |
+            | macOS 10.15 tai uudempi (Apple Silicon ja Intel) | **MettisTool.dmg** |
+            | Linux, mikä tahansa jakelu | **MettisTool.AppImage** |
+            | Debian ja Ubuntu | **MettisTool.deb** |
+
+            Sovellusta ei ole allekirjoitettu koodivarmenteella:
+
+            - **Windows** — SmartScreen varoittaa ensimmäisellä ajolla.
+              Valitse *Lisätietoja → Suorita joka tapauksessa*.
+            - **macOS** — Gatekeeper estää avaamisen. Avaa Finderissa
+              *Ctrl-klikkaus → Avaa*, tai aja `xattr -cr /Applications/MettisTool.app`.
+            - **Linux** — AppImage tarvitsee suoritusoikeuden:
+              `chmod +x MettisTool.AppImage`

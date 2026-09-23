@@ -44,9 +44,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
+    "targets": "all",
     "publisher": "MettisTool",
     "copyright": "Copyright © 2026 MettisTool",
     "category": "Utility",
@@ -56,6 +54,7 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
+      "icons/icon.icns",
       "icons/icon.ico"
     ],
     "windows": {
@@ -72,7 +71,25 @@
         ],
         "displayLanguageSelector": true,
         "installerIcon": "icons/icon.ico",
-        "compression": "lzma"
+        "compression": "lzma",
+        "customLanguageFiles": {
+          "Finnish": "nsis/Finnish.nsh"
+        }
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
       }
     }
   },

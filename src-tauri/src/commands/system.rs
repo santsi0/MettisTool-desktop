@@ -195,7 +195,7 @@ pub fn set_autostart(state: State<'_, AppState>, enabled: bool) -> AppResult<boo
     let ctx = state.require_auth()?;
     settings::set_bool(&state.db, settings::AUTOSTART, enabled, Some(ctx.user_id))?;
 
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(any(windows, target_os = "macos", target_os = "linux"))]
     {
         use tauri_plugin_autostart::ManagerExt;
         // Kahva haetaan globaalista sovelluskahvasta setup-vaiheessa tallennetusta tilasta.
