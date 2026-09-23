@@ -1,0 +1,14 @@
+{
+  "url": "https://zotuzfejifuleyjswwso.supabase.co",
+  "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvdHV6ZmVqaWZ1bGV5anN3d3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNjE3NTksImV4cCI6MjEwNTczNzc1OX0.ubtX5Dmj8NQ-3ZRvgB5ppP9NFDCUY8SVgLS595it5Hg",
+  "_comment": [
+    "anonKey on Supabasen julkinen avain. Se on tarkoitettu kulkemaan jokaisen",
+    "asiakassovelluksen mukana ja se on luettavissa binaaristä — tämä on Supabasen",
+    "suunniteltu toimintatapa, ei vuoto. Avain ei anna itsessään yhtään oikeutta:",
+    "kaikki suojaus on tietokannan RLS-säännöissä (supabase/migrations/0001_init.sql),",
+    "jotka on testattu 67 testillä ja varmennettu tuotantoprojektia vasten.",
+    "",
+    "service_role-avain EI KOSKAAN tule tähän tiedostoon eikä versionhallintaan.",
+    "Se ohittaa kaikki RLS-säännöt ja kuuluu vain Supabasen hallintapaneeliin."
+  ]
+}
