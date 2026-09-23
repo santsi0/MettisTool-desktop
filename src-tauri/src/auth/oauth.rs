@@ -195,7 +195,9 @@ fn parse_callback(target: &str) -> OAuthCallback {
     let mut error = None;
 
     for pair in query.split('&') {
-        let Some((k, v)) = pair.split_once('=') else { continue };
+        let Some((k, v)) = pair.split_once('=') else {
+            continue;
+        };
         let value = percent_decode(v);
         match k {
             "code" => code = Some(value),
@@ -213,7 +215,10 @@ fn percent_decode(input: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(b) = u8::from_str_radix(&format!("{}{}", bytes[i + 1] as char, bytes[i + 2] as char), 16) {
+            if let Ok(b) = u8::from_str_radix(
+                &format!("{}{}", bytes[i + 1] as char, bytes[i + 2] as char),
+                16,
+            ) {
                 out.push(b);
                 i += 3;
                 continue;
@@ -250,7 +255,9 @@ pub async fn exchange(code: &str, verifier: &str, redirect_uri: &str) -> AppResu
         .form(&form)
         .send()
         .await
-        .map_err(|e| AppError::OAuthFailed(format!("token-pyyntö epäonnistui: {}", e.without_url())))?;
+        .map_err(|e| {
+            AppError::OAuthFailed(format!("token-pyyntö epäonnistui: {}", e.without_url()))
+        })?;
 
     if !res.status().is_success() {
         return Err(AppError::OAuthFailed(format!(
@@ -275,7 +282,12 @@ pub async fn exchange(code: &str, verifier: &str, redirect_uri: &str) -> AppResu
         .bearer_auth(&token.access_token)
         .send()
         .await
-        .map_err(|e| AppError::OAuthFailed(format!("käyttäjätietojen haku epäonnistui: {}", e.without_url())))?;
+        .map_err(|e| {
+            AppError::OAuthFailed(format!(
+                "käyttäjätietojen haku epäonnistui: {}",
+                e.without_url()
+            ))
+        })?;
 
     if !res.status().is_success() {
         return Err(AppError::OAuthFailed(format!(

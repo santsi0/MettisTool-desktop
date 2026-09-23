@@ -706,7 +706,11 @@ pub struct CodeDelivery {
 
 pub fn prepare_verification_resend(db: &Db, email: &str) -> AppResult<Option<CodeDelivery>> {
     let normalized = util::normalize_email(email);
-    ratelimit::check(db, &format!("verify:{normalized}"), &ratelimit::VERIFY_RESEND)?;
+    ratelimit::check(
+        db,
+        &format!("verify:{normalized}"),
+        &ratelimit::VERIFY_RESEND,
+    )?;
 
     // Olemassaolon paljastamista vältetään: palautetaan None ilman virhettä.
     let Some(user) = find_by_email(db, &normalized)? else {
@@ -739,7 +743,11 @@ pub fn prepare_verification_resend(db: &Db, email: &str) -> AppResult<Option<Cod
 
 pub fn prepare_password_reset(db: &Db, email: &str) -> AppResult<Option<CodeDelivery>> {
     let normalized = util::normalize_email(email);
-    ratelimit::check(db, &format!("reset:{normalized}"), &ratelimit::PASSWORD_RESET)?;
+    ratelimit::check(
+        db,
+        &format!("reset:{normalized}"),
+        &ratelimit::PASSWORD_RESET,
+    )?;
 
     let Some(user) = find_by_email(db, &normalized)? else {
         // Ei paljasteta onko osoite olemassa.

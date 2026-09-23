@@ -118,7 +118,10 @@ pub async fn check_updates(state: State<'_, AppState>) -> AppResult<UpdateInfo> 
             checked_at: util::now(),
         });
     }
-    if !repo.chars().all(|c| c.is_alphanumeric() || c == '/' || c == '-' || c == '_' || c == '.') {
+    if !repo
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '/' || c == '-' || c == '_' || c == '.')
+    {
         return Err(AppError::validation("repo", "invalid"));
     }
 

@@ -15,7 +15,11 @@ const MAX_VALUE_BYTES: usize = 512 * 1024;
 
 fn clean_key(key: &str) -> AppResult<String> {
     let k = sanitize_line(key, 80);
-    if k.is_empty() || !k.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == '_') {
+    if k.is_empty()
+        || !k
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == '_')
+    {
         return Err(AppError::validation("key", "invalid"));
     }
     Ok(k)
@@ -151,7 +155,10 @@ pub fn tool_usage_clear(state: State<'_, AppState>, keep_favorites: bool) -> App
                 params![ctx.user_id],
             )?;
         } else {
-            c.execute("DELETE FROM tool_usage WHERE user_id = ?1", params![ctx.user_id])?;
+            c.execute(
+                "DELETE FROM tool_usage WHERE user_id = ?1",
+                params![ctx.user_id],
+            )?;
         }
         Ok(())
     })

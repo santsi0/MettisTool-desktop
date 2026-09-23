@@ -203,7 +203,10 @@ pub fn two_factor_begin(state: State<'_, AppState>) -> AppResult<TwoFactorSetup>
     }
     let secret = auth::totp::generate_secret();
     // Salaisuus tallennetaan vasta kun käyttäjä on vahvistanut koodin.
-    secrets::set(&format!("{}_pending", secrets::totp_key(ctx.user_id)), &secret)?;
+    secrets::set(
+        &format!("{}_pending", secrets::totp_key(ctx.user_id)),
+        &secret,
+    )?;
     Ok(TwoFactorSetup {
         otpauth_url: auth::totp::otpauth_url(&secret, &user.email),
         secret,
@@ -211,7 +214,10 @@ pub fn two_factor_begin(state: State<'_, AppState>) -> AppResult<TwoFactorSetup>
 }
 
 #[tauri::command]
-pub async fn two_factor_enable(state: State<'_, AppState>, code: String) -> AppResult<RecoveryCodes> {
+pub async fn two_factor_enable(
+    state: State<'_, AppState>,
+    code: String,
+) -> AppResult<RecoveryCodes> {
     let ctx = state.require_auth()?;
     let pending_key = format!("{}_pending", secrets::totp_key(ctx.user_id));
     let secret = secrets::get(&pending_key).ok_or(AppError::Conflict("no_pending_setup".into()))?;

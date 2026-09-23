@@ -53,8 +53,9 @@ impl Db {
         self.with(|c| {
             let page_count: i64 = c.query_row("PRAGMA page_count", [], |r| r.get(0))?;
             let page_size: i64 = c.query_row("PRAGMA page_size", [], |r| r.get(0))?;
-            let integrity: String =
-                c.query_row("PRAGMA quick_check(1)", [], |r| r.get(0)).unwrap_or_else(|_| "unknown".into());
+            let integrity: String = c
+                .query_row("PRAGMA quick_check(1)", [], |r| r.get(0))
+                .unwrap_or_else(|_| "unknown".into());
             let users: i64 = c.query_row("SELECT COUNT(*) FROM users", [], |r| r.get(0))?;
             let audit: i64 = c.query_row("SELECT COUNT(*) FROM audit_log", [], |r| r.get(0))?;
             let sessions: i64 = c.query_row(

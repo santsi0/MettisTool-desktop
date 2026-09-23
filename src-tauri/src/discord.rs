@@ -170,8 +170,12 @@ pub fn status(db: &Db) -> DiscordStatus {
         configured: hook.is_some(),
         webhook_masked: hook.as_deref().map(util::mask_url),
         level: settings::get(db, settings::DISCORD_LEVEL),
-        last_success: settings::get(db, settings::DISCORD_LAST_SUCCESS).parse().ok(),
-        last_failure: settings::get(db, settings::DISCORD_LAST_FAILURE).parse().ok(),
+        last_success: settings::get(db, settings::DISCORD_LAST_SUCCESS)
+            .parse()
+            .ok(),
+        last_failure: settings::get(db, settings::DISCORD_LAST_FAILURE)
+            .parse()
+            .ok(),
         failure_count: settings::get(db, settings::DISCORD_FAILURE_COUNT)
             .parse()
             .unwrap_or(0),

@@ -100,9 +100,7 @@ fn scrub(value: &serde_json::Value) -> serde_json::Value {
         serde_json::Value::Array(items) => {
             serde_json::Value::Array(items.iter().map(scrub).collect())
         }
-        serde_json::Value::String(s) => {
-            serde_json::Value::String(sanitize_line(s, 500))
-        }
+        serde_json::Value::String(s) => serde_json::Value::String(sanitize_line(s, 500)),
         other => other.clone(),
     }
 }
@@ -189,7 +187,8 @@ pub fn query(db: &Db, filter: &AuditFilter) -> AppResult<Page<AuditEntry>> {
         let s = search.trim();
         if !s.is_empty() {
             where_parts.push(
-                "(event LIKE ? OR IFNULL(actor_name,'') LIKE ? OR IFNULL(target_name,'') LIKE ?)".into(),
+                "(event LIKE ? OR IFNULL(actor_name,'') LIKE ? OR IFNULL(target_name,'') LIKE ?)"
+                    .into(),
             );
             let pattern = format!("%{}%", s.replace('%', "").replace('_', ""));
             args.push(Box::new(pattern.clone()));

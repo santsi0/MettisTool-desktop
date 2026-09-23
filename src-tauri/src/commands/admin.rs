@@ -122,9 +122,17 @@ pub fn list_users(state: State<'_, AppState>, filter: UserFilter) -> AppResult<P
     let mut clauses: Vec<String> = Vec::new();
     let mut args: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
-    if let Some(search) = filter.search.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    if let Some(search) = filter
+        .search
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         clauses.push("(username_lower LIKE ? OR email_lower LIKE ?)".into());
-        let pattern = format!("%{}%", search.to_lowercase().replace('%', "").replace('_', ""));
+        let pattern = format!(
+            "%{}%",
+            search.to_lowercase().replace('%', "").replace('_', "")
+        );
         args.push(Box::new(pattern.clone()));
         args.push(Box::new(pattern));
     }
@@ -132,7 +140,11 @@ pub fn list_users(state: State<'_, AppState>, filter: UserFilter) -> AppResult<P
         clauses.push("role = ?".into());
         args.push(Box::new(role.clone()));
     }
-    if let Some(status) = filter.status.as_ref().filter(|s| !s.is_empty() && *s != "ALL") {
+    if let Some(status) = filter
+        .status
+        .as_ref()
+        .filter(|s| !s.is_empty() && *s != "ALL")
+    {
         clauses.push("status = ?".into());
         args.push(Box::new(status.clone()));
     }
@@ -259,7 +271,13 @@ pub async fn admin_create_user(
     if input.send_invite {
         let code = auth::tokens::issue(db, user_id, auth::tokens::KIND_INVITE, 7 * 86_400)?;
         if email::is_configured(db) {
-            let mail = email::invite_mail(&input.email, &input.username, &input.role, &code.token, "fi");
+            let mail = email::invite_mail(
+                &input.email,
+                &input.username,
+                &input.role,
+                &code.token,
+                "fi",
+            );
             let _ = email::send(db, mail).await;
         }
     }
@@ -281,7 +299,11 @@ fn ensure_can_manage(ctx: &crate::state::AuthContext, target: &auth::UserRow) ->
 }
 
 #[tauri::command]
-pub fn set_user_role(state: State<'_, AppState>, user_id: i64, role: String) -> AppResult<PublicUser> {
+pub fn set_user_role(
+    state: State<'_, AppState>,
+    user_id: i64,
+    role: String,
+) -> AppResult<PublicUser> {
     let ctx = state.require_permission("MANAGE_ROLES")?;
     let target = load_target(&state, user_id)?;
     ensure_can_manage(&ctx, &target)?;
@@ -347,7 +369,11 @@ pub fn set_user_status(
     audit::log(
         &state.db,
         audit::Event::new(
-            if enabled { "ACCOUNT_ENABLED" } else { "ACCOUNT_DISABLED" },
+            if enabled {
+                "ACCOUNT_ENABLED"
+            } else {
+                "ACCOUNT_DISABLED"
+            },
             audit::CAT_ADMIN,
         )
         .severity(audit::SEV_WARNING)
@@ -358,7 +384,11 @@ pub fn set_user_status(
 }
 
 #[tauri::command]
-pub fn set_user_lock(state: State<'_, AppState>, user_id: i64, locked: bool) -> AppResult<PublicUser> {
+pub fn set_user_lock(
+    state: State<'_, AppState>,
+    user_id: i64,
+    locked: bool,
+) -> AppResult<PublicUser> {
     let ctx = state.require_permission("EDIT_USERS")?;
     let target = load_target(&state, user_id)?;
     ensure_can_manage(&ctx, &target)?;
@@ -380,7 +410,11 @@ pub fn set_user_lock(state: State<'_, AppState>, user_id: i64, locked: bool) -> 
     audit::log(
         &state.db,
         audit::Event::new(
-            if locked { "ACCOUNT_LOCKED" } else { "ACCOUNT_UNLOCKED" },
+            if locked {
+                "ACCOUNT_LOCKED"
+            } else {
+                "ACCOUNT_UNLOCKED"
+            },
             audit::CAT_SECURITY,
         )
         .severity(audit::SEV_WARNING)
@@ -541,7 +575,10 @@ pub fn delete_user(state: State<'_, AppState>, user_id: i64) -> AppResult<()> {
 // ===== Oikeudet =====
 
 #[tauri::command]
-pub fn list_permissions(state: State<'_, AppState>, user_id: i64) -> AppResult<Vec<PermissionInfo>> {
+pub fn list_permissions(
+    state: State<'_, AppState>,
+    user_id: i64,
+) -> AppResult<Vec<PermissionInfo>> {
     state.require_permission("VIEW_USERS")?;
     let target = load_target(&state, user_id)?;
     let effective = rbac::effective_permissions(&state.db, user_id, &target.role)?;
@@ -760,9 +797,14 @@ pub fn discord_configure(
     let ctx = state.require_permission("MANAGE_DISCORD")?;
 
     if let Some(url) = webhook.as_ref().map(|w| w.trim()).filter(|w| !w.is_empty()) {
-        let parsed = url::Url::parse(url).map_err(|_| AppError::validation("webhook", "invalid"))?;
+        let parsed =
+            url::Url::parse(url).map_err(|_| AppError::validation("webhook", "invalid"))?;
         let host = parsed.host_str().unwrap_or_default();
-        if parsed.scheme() != "https" || !(host == "discord.com" || host == "discordapp.com" || host.ends_with(".discord.com")) {
+        if parsed.scheme() != "https"
+            || !(host == "discord.com"
+                || host == "discordapp.com"
+                || host.ends_with(".discord.com"))
+        {
             return Err(AppError::validation("webhook", "not_discord"));
         }
         secrets::set(secrets::DISCORD_WEBHOOK, url)?;
@@ -771,7 +813,10 @@ pub fn discord_configure(
         settings::set_bool(&state.db, settings::DISCORD_ENABLED, on, Some(ctx.user_id))?;
     }
     if let Some(lvl) = level {
-        if !matches!(lvl.as_str(), "AUTH" | "SECURITY" | "ADMIN" | "SYSTEM" | "ALL") {
+        if !matches!(
+            lvl.as_str(),
+            "AUTH" | "SECURITY" | "ADMIN" | "SYSTEM" | "ALL"
+        ) {
             return Err(AppError::validation("level", "invalid"));
         }
         settings::set(&state.db, settings::DISCORD_LEVEL, &lvl, Some(ctx.user_id))?;
@@ -791,14 +836,20 @@ pub fn discord_configure(
 pub fn discord_clear(state: State<'_, AppState>) -> AppResult<DiscordStatus> {
     let ctx = state.require_permission("MANAGE_DISCORD")?;
     secrets::delete(secrets::DISCORD_WEBHOOK)?;
-    settings::set_bool(&state.db, settings::DISCORD_ENABLED, false, Some(ctx.user_id))?;
+    settings::set_bool(
+        &state.db,
+        settings::DISCORD_ENABLED,
+        false,
+        Some(ctx.user_id),
+    )?;
     Ok(discord::status(&state.db))
 }
 
 #[tauri::command]
 pub async fn discord_test(state: State<'_, AppState>) -> AppResult<()> {
     state.require_permission("MANAGE_DISCORD")?;
-    let url = secrets::get(secrets::DISCORD_WEBHOOK).ok_or(AppError::validation("webhook", "missing"))?;
+    let url =
+        secrets::get(secrets::DISCORD_WEBHOOK).ok_or(AppError::validation("webhook", "missing"))?;
     let path = state.db.path.clone();
     discord::send_test(path, url).await
 }
@@ -824,13 +875,21 @@ pub fn google_configure(
 ) -> AppResult<GoogleStatus> {
     let ctx = state.require_permission("MANAGE_SECURITY")?;
 
-    if let Some(id) = client_id.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    if let Some(id) = client_id
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         if !id.ends_with(".apps.googleusercontent.com") {
             return Err(AppError::validation("clientId", "invalid_format"));
         }
         secrets::set(secrets::GOOGLE_CLIENT_ID, id)?;
     }
-    if let Some(sec) = client_secret.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    if let Some(sec) = client_secret
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         if sec.len() < 10 {
             return Err(AppError::validation("clientSecret", "invalid_format"));
         }
@@ -840,7 +899,12 @@ pub fn google_configure(
         if on && !auth::oauth::is_configured() {
             return Err(AppError::OAuthNotConfigured);
         }
-        settings::set_bool(&state.db, settings::GOOGLE_LOGIN_ENABLED, on, Some(ctx.user_id))?;
+        settings::set_bool(
+            &state.db,
+            settings::GOOGLE_LOGIN_ENABLED,
+            on,
+            Some(ctx.user_id),
+        )?;
     }
 
     audit::log(
@@ -862,7 +926,12 @@ pub fn google_clear(state: State<'_, AppState>) -> AppResult<()> {
     let ctx = state.require_permission("MANAGE_SECURITY")?;
     secrets::delete(secrets::GOOGLE_CLIENT_ID)?;
     secrets::delete(secrets::GOOGLE_CLIENT_SECRET)?;
-    settings::set_bool(&state.db, settings::GOOGLE_LOGIN_ENABLED, false, Some(ctx.user_id))?;
+    settings::set_bool(
+        &state.db,
+        settings::GOOGLE_LOGIN_ENABLED,
+        false,
+        Some(ctx.user_id),
+    )?;
     Ok(())
 }
 
@@ -875,7 +944,11 @@ pub fn get_settings(state: State<'_, AppState>) -> AppResult<serde_json::Value> 
 }
 
 #[tauri::command]
-pub fn set_setting(state: State<'_, AppState>, key: String, value: String) -> AppResult<serde_json::Value> {
+pub fn set_setting(
+    state: State<'_, AppState>,
+    key: String,
+    value: String,
+) -> AppResult<serde_json::Value> {
     let ctx = state.require_permission("MANAGE_SETTINGS")?;
     if !settings::is_writable(&key) {
         return Err(AppError::validation("key", "not_writable"));

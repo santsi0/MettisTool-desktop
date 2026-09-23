@@ -29,7 +29,6 @@ työkalu sitä erikseen tarvitse.
 1. Avaa repositorion **Releases**-sivu.
 2. Lataa **`MettisTool-Setup.exe`** ja aja se. Asennus tehdään käyttäjäkohtaisesti,
    joten järjestelmänvalvojan oikeuksia ei tarvita.
-   Vaihtoehtoisesti voit ladata **`MettisTool.exe`**, joka toimii ilman asennusta.
 3. Tarkista halutessasi latauksen eheys `SHA256SUMS.txt`-tiedostosta:
 
    ```powershell
@@ -121,10 +120,12 @@ Windows-koneella eikä vaadi sinulta mitään asennuksia.
    luo se ja kopioi sisältö tiedostosta `build-windows-workflow.yml.txt`.
 2. Avaa **Actions → Rakenna Windows-sovellus → Run workflow**.
 3. Noin 10–15 minuutin kuluttua lataa tulokset kohdasta *Artifacts*:
-   `MettisTool.exe`, `MettisTool-Setup.exe`, `SHA256SUMS.txt`.
+   `MettisTool-Setup.exe`, `MettisTool.exe` ja `SHA256SUMS.txt`. Artefaktit
+   vanhenevat 30 päivässä.
 
-Kun työnnät version-tagin, sama työnkulku julkaisee tiedostot automaattisesti
-Release-sivulle:
+Kun työnnät version-tagin, sama työnkulku julkaisee **asennusohjelman ja sen
+tarkistussumman** Release-sivulle. Asennukseton `MettisTool.exe` jää vain
+Actions-artefaktiin, jotta julkaistavana on yksi selkeä tiedosto:
 
 ```bash
 git tag v1.0.0

@@ -13,13 +13,34 @@ pub struct Limit {
     pub window: i64,
 }
 
-pub const LOGIN: Limit = Limit { max: 10, window: 300 };
-pub const REGISTER: Limit = Limit { max: 5, window: 3_600 };
-pub const VERIFY_RESEND: Limit = Limit { max: 3, window: 900 };
-pub const PASSWORD_RESET: Limit = Limit { max: 3, window: 900 };
-pub const EMAIL_SEND: Limit = Limit { max: 30, window: 3_600 };
-pub const TOTP_ATTEMPT: Limit = Limit { max: 8, window: 300 };
-pub const OAUTH: Limit = Limit { max: 10, window: 600 };
+pub const LOGIN: Limit = Limit {
+    max: 10,
+    window: 300,
+};
+pub const REGISTER: Limit = Limit {
+    max: 5,
+    window: 3_600,
+};
+pub const VERIFY_RESEND: Limit = Limit {
+    max: 3,
+    window: 900,
+};
+pub const PASSWORD_RESET: Limit = Limit {
+    max: 3,
+    window: 900,
+};
+pub const EMAIL_SEND: Limit = Limit {
+    max: 30,
+    window: 3_600,
+};
+pub const TOTP_ATTEMPT: Limit = Limit {
+    max: 8,
+    window: 300,
+};
+pub const OAUTH: Limit = Limit {
+    max: 10,
+    window: 600,
+};
 
 /// Kirjaa yrityksen ja palauttaa virheen jos raja ylittyy.
 pub fn check(db: &Db, key: &str, limit: &Limit) -> AppResult<()> {

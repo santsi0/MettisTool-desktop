@@ -11,7 +11,9 @@ use tauri::State;
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum LoginResponse {
     #[serde(rename_all = "camelCase")]
-    Ok { session: SessionInfo },
+    Ok {
+        session: SessionInfo,
+    },
     TwoFactor,
 }
 
@@ -73,12 +75,20 @@ pub async fn setup_owner(
         let _ = email::send(&state.db, mail).await;
     }
 
-    let _ = settings::set(&state.db, settings::EMAIL_SENDER_NAME, "MettisTool", Some(result.user_id));
+    let _ = settings::set(
+        &state.db,
+        settings::EMAIL_SENDER_NAME,
+        "MettisTool",
+        Some(result.user_id),
+    );
     auth::establish_session(&state, result.user_id, false, "setup")
 }
 
 #[tauri::command]
-pub async fn register(state: State<'_, AppState>, input: RegisterInput) -> AppResult<RegisterResponse> {
+pub async fn register(
+    state: State<'_, AppState>,
+    input: RegisterInput,
+) -> AppResult<RegisterResponse> {
     let result = auth::register(
         &state.db,
         &input.username,
@@ -155,7 +165,10 @@ pub fn verify_email(state: State<'_, AppState>, code: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub async fn resend_verification(state: State<'_, AppState>, email_address: String) -> AppResult<bool> {
+pub async fn resend_verification(
+    state: State<'_, AppState>,
+    email_address: String,
+) -> AppResult<bool> {
     let delivery = auth::prepare_verification_resend(&state.db, &email_address)?;
     let Some(d) = delivery else {
         // Ei paljasteta onko tiliä olemassa.
@@ -195,7 +208,12 @@ pub async fn reset_password(
     let user_id = auth::complete_password_reset(&state.db, &code, &new_password)?;
     if email::is_configured(&state.db) {
         if let Ok(Some(user)) = auth::find_by_id(&state.db, user_id) {
-            let mail = email::security_mail(&user.email, &user.username, "salasana vaihdettiin", &user.language);
+            let mail = email::security_mail(
+                &user.email,
+                &user.username,
+                "salasana vaihdettiin",
+                &user.language,
+            );
             let _ = email::send(&state.db, mail).await;
         }
     }
@@ -203,7 +221,11 @@ pub async fn reset_password(
 }
 
 #[tauri::command]
-pub fn accept_invite(state: State<'_, AppState>, code: String, new_password: String) -> AppResult<()> {
+pub fn accept_invite(
+    state: State<'_, AppState>,
+    code: String,
+    new_password: String,
+) -> AppResult<()> {
     auth::complete_invite(&state.db, &code, &new_password)?;
     Ok(())
 }
@@ -257,9 +279,14 @@ pub fn google_begin(state: State<'_, AppState>, link_current: bool) -> AppResult
 pub enum GooglePoll {
     Pending,
     #[serde(rename_all = "camelCase")]
-    Ready { session: Option<SessionInfo>, linked: bool },
+    Ready {
+        session: Option<SessionInfo>,
+        linked: bool,
+    },
     #[serde(rename_all = "camelCase")]
-    Failed { reason: String },
+    Failed {
+        reason: String,
+    },
 }
 
 /// Käyttöliittymä kutsuu tätä kunnes tila on `ready` tai `failed`.
@@ -278,7 +305,10 @@ pub async fn google_poll(state: State<'_, AppState>) -> AppResult<GooglePoll> {
     };
 
     let flow = {
-        let mut guard = state.oauth.lock().map_err(|_| AppError::internal("oauth-lukko"))?;
+        let mut guard = state
+            .oauth
+            .lock()
+            .map_err(|_| AppError::internal("oauth-lukko"))?;
         guard.take()
     };
     let Some(flow) = flow else {
@@ -381,7 +411,10 @@ fn link_google_identity(
     Ok(())
 }
 
-fn login_with_google(state: &AppState, profile: &auth::oauth::GoogleUser) -> AppResult<SessionInfo> {
+fn login_with_google(
+    state: &AppState,
+    profile: &auth::oauth::GoogleUser,
+) -> AppResult<SessionInfo> {
     let db = &state.db;
 
     // 1) Tunnettu Google-identiteetti
@@ -429,7 +462,8 @@ fn login_with_google(state: &AppState, profile: &auth::oauth::GoogleUser) -> App
                     .filter(|c| c.is_alphanumeric() || *c == '.' || *c == '-' || *c == '_')
                     .take(24)
                     .collect::<String>();
-                let username = unique_username(db, if base.len() >= 3 { &base } else { "kayttaja" })?;
+                let username =
+                    unique_username(db, if base.len() >= 3 { &base } else { "kayttaja" })?;
 
                 let id = auth::create_user(
                     db,
@@ -472,8 +506,7 @@ fn login_with_google(state: &AppState, profile: &auth::oauth::GoogleUser) -> App
 
     audit::log(
         db,
-        audit::Event::new("GOOGLE_LOGIN", audit::CAT_AUTH)
-            .actor(user.id, user.username.clone()),
+        audit::Event::new("GOOGLE_LOGIN", audit::CAT_AUTH).actor(user.id, user.username.clone()),
     );
 
     auth::establish_session(state, user_id, false, "google")

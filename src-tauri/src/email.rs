@@ -22,7 +22,10 @@ pub fn api_key() -> Option<String> {
 }
 
 pub fn is_configured(db: &Db) -> bool {
-    api_key().is_some() && !settings::get(db, settings::EMAIL_SENDER_ADDRESS).trim().is_empty()
+    api_key().is_some()
+        && !settings::get(db, settings::EMAIL_SENDER_ADDRESS)
+            .trim()
+            .is_empty()
 }
 
 pub fn status(db: &Db) -> EmailStatus {
@@ -40,8 +43,12 @@ pub fn status(db: &Db) -> EmailStatus {
                 Some(e)
             }
         },
-        failure_count: settings::get(db, settings::EMAIL_FAILURE_COUNT).parse().unwrap_or(0),
-        sent_count: settings::get(db, settings::EMAIL_SENT_COUNT).parse().unwrap_or(0),
+        failure_count: settings::get(db, settings::EMAIL_FAILURE_COUNT)
+            .parse()
+            .unwrap_or(0),
+        sent_count: settings::get(db, settings::EMAIL_SENT_COUNT)
+            .parse()
+            .unwrap_or(0),
     }
 }
 
@@ -245,7 +252,9 @@ pub fn security_mail(to: &str, username: &str, what: &str, lang: &str) -> Mail {
                 "Jos teit muutoksen itse, mitään ei tarvitse tehdä.",
                 "Jos et tehnyt muutosta, vaihda salasanasi heti ja ota yhteyttä ylläpitoon.",
             ),
-            text: format!("Turvallisuusilmoitus: {what}. Jos et tehnyt muutosta, vaihda salasanasi heti."),
+            text: format!(
+                "Turvallisuusilmoitus: {what}. Jos et tehnyt muutosta, vaihda salasanasi heti."
+            ),
         }
     } else {
         Mail {

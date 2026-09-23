@@ -37,7 +37,9 @@ pub fn base32_decode(input: &str) -> Option<Vec<u8>> {
     let mut bits = 0u32;
     let mut value = 0u32;
     for ch in input.chars().filter(|c| !c.is_whitespace() && *c != '=') {
-        let idx = B32.iter().position(|&b| b as char == ch.to_ascii_uppercase())?;
+        let idx = B32
+            .iter()
+            .position(|&b| b as char == ch.to_ascii_uppercase())?;
         value = (value << 5) | idx as u32;
         bits += 5;
         if bits >= 8 {
@@ -68,7 +70,11 @@ fn hotp(secret: &[u8], counter: u64) -> AppResult<u32> {
 pub fn current_code(secret_b32: &str, at: i64) -> AppResult<String> {
     let secret = base32_decode(secret_b32).ok_or(AppError::InvalidTwoFactor)?;
     let counter = (at / STEP) as u64;
-    Ok(format!("{:0width$}", hotp(&secret, counter)?, width = DIGITS as usize))
+    Ok(format!(
+        "{:0width$}",
+        hotp(&secret, counter)?,
+        width = DIGITS as usize
+    ))
 }
 
 /// Hyväksyy koodin yhden aikaikkunan verran eteen ja taakse (kellon ryömintä).

@@ -22,7 +22,14 @@ pub struct ValidSession {
     pub expires_at: i64,
 }
 
-pub fn create(db: &Db, user_id: i64, remember: bool, device: &str, hours: i64, remember_days: i64) -> AppResult<NewSession> {
+pub fn create(
+    db: &Db,
+    user_id: i64,
+    remember: bool,
+    device: &str,
+    hours: i64,
+    remember_days: i64,
+) -> AppResult<NewSession> {
     let token = random_token(32);
     let hash = sha256_hex(&token);
     let ts = now();

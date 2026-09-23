@@ -4,7 +4,9 @@
 //! ainoastaan Argon2id-tiiviste (PHC-merkkijono) päätyy tietokantaan.
 
 use crate::error::{AppError, AppResult};
-use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+use argon2::password_hash::{
+    rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+};
 use argon2::{Algorithm, Argon2, Params, Version};
 
 /// OWASP:n suositusparametrit (2024): 19 MiB muistia, 2 kierrosta, 1 rinnakkaisuus.

@@ -22,7 +22,12 @@ fn timestamp_name(kind: &str) -> String {
     format!("mettistool-{}-{ts}.db", kind.to_lowercase())
 }
 
-pub fn create(db: &Db, app_data: &Path, kind: &str, by: Option<(i64, String)>) -> AppResult<BackupRow> {
+pub fn create(
+    db: &Db,
+    app_data: &Path,
+    kind: &str,
+    by: Option<(i64, String)>,
+) -> AppResult<BackupRow> {
     let dir = backup_dir(app_data);
     std::fs::create_dir_all(&dir)?;
     let path = dir.join(timestamp_name(kind));
@@ -36,7 +41,9 @@ pub fn create(db: &Db, app_data: &Path, kind: &str, by: Option<(i64, String)>) -
         Ok(())
     })?;
 
-    let size = std::fs::metadata(&path).map(|m| m.len() as i64).unwrap_or(0);
+    let size = std::fs::metadata(&path)
+        .map(|m| m.len() as i64)
+        .unwrap_or(0);
     let ts = now();
     let version = app_version();
 
@@ -177,8 +184,9 @@ pub fn export_user_data(db: &Db, user_id: i64) -> AppResult<serde_json::Value> {
         Ok(out)
     })?;
     let usage: Vec<(String, i64, Option<i64>, i64)> = db.with(|c| {
-        let mut stmt =
-            c.prepare("SELECT tool_id, uses, last_used, favorite FROM tool_usage WHERE user_id = ?1")?;
+        let mut stmt = c.prepare(
+            "SELECT tool_id, uses, last_used, favorite FROM tool_usage WHERE user_id = ?1",
+        )?;
         let it = stmt.query_map(params![user_id], |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
         })?;

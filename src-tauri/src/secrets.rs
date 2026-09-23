@@ -43,7 +43,9 @@ pub fn delete(key: &str) -> AppResult<()> {
         Ok(e) => match e.delete_credential() {
             Ok(_) => Ok(()),
             Err(keyring::Error::NoEntry) => Ok(()),
-            Err(e) => Err(AppError::internal(format!("avainsäilön poisto epäonnistui: {e}"))),
+            Err(e) => Err(AppError::internal(format!(
+                "avainsäilön poisto epäonnistui: {e}"
+            ))),
         },
         Err(e) => Err(e),
     }

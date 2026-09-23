@@ -66,9 +66,11 @@ fn default_for(key: &str) -> &'static str {
 pub fn get(db: &Db, key: &str) -> String {
     db.with(|c| {
         let v: Option<String> = c
-            .query_row("SELECT value FROM settings WHERE key = ?1", params![key], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT value FROM settings WHERE key = ?1",
+                params![key],
+                |r| r.get(0),
+            )
             .ok();
         Ok(v.unwrap_or_else(|| default_for(key).to_string()))
     })
@@ -80,9 +82,10 @@ pub fn get_bool(db: &Db, key: &str) -> bool {
 }
 
 pub fn get_i64(db: &Db, key: &str, min: i64, max: i64) -> i64 {
-    get(db, key).parse::<i64>().unwrap_or_else(|_| {
-        default_for(key).parse::<i64>().unwrap_or(min)
-    }).clamp(min, max)
+    get(db, key)
+        .parse::<i64>()
+        .unwrap_or_else(|_| default_for(key).parse::<i64>().unwrap_or(min))
+        .clamp(min, max)
 }
 
 pub fn set(db: &Db, key: &str, value: &str, by: Option<i64>) -> AppResult<()> {

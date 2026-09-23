@@ -51,7 +51,10 @@ pub fn mask_url(value: &str) -> String {
     match url::Url::parse(value) {
         Ok(u) => {
             let host = u.host_str().unwrap_or("?");
-            let tail: String = value.chars().skip(value.chars().count().saturating_sub(4)).collect();
+            let tail: String = value
+                .chars()
+                .skip(value.chars().count().saturating_sub(4))
+                .collect();
             format!("https://{host}/…{tail}")
         }
         Err(_) => mask_secret(value),
@@ -77,7 +80,11 @@ pub fn validate_email(email: &str) -> AppResult<String> {
         return Err(AppError::validation("email", "invalid"));
     }
     let domain = parts[1];
-    if !domain.contains('.') || domain.starts_with('.') || domain.ends_with('.') || domain.contains("..") {
+    if !domain.contains('.')
+        || domain.starts_with('.')
+        || domain.ends_with('.')
+        || domain.contains("..")
+    {
         return Err(AppError::validation("email", "invalid"));
     }
     if e.chars().any(|c| c.is_whitespace()) {
@@ -135,7 +142,14 @@ pub fn validate_password(password: &str) -> AppResult<()> {
     }
     let lower = password.to_lowercase();
     const COMMON: [&str; 8] = [
-        "password", "salasana", "qwerty", "123456", "admin123", "mettistool", "iloveyou", "welcome",
+        "password",
+        "salasana",
+        "qwerty",
+        "123456",
+        "admin123",
+        "mettistool",
+        "iloveyou",
+        "welcome",
     ];
     if COMMON.iter().any(|c| lower.contains(c)) {
         return Err(AppError::validation("password", "too_common"));

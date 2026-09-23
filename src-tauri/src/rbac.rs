@@ -45,7 +45,8 @@ pub fn effective_permissions(db: &Db, user_id: i64, role: &str) -> AppResult<Vec
             perms.insert(p?);
         }
 
-        let mut stmt = c.prepare("SELECT permission, granted FROM user_permissions WHERE user_id = ?1")?;
+        let mut stmt =
+            c.prepare("SELECT permission, granted FROM user_permissions WHERE user_id = ?1")?;
         let rows = stmt.query_map(params![user_id], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
         })?;
@@ -115,9 +116,11 @@ pub fn ensure_not_last_owner(db: &Db, target_id: i64) -> AppResult<()> {
     })?;
     let target_is_owner: bool = db.with(|c| {
         let role: Option<String> = c
-            .query_row("SELECT role FROM users WHERE id = ?1", params![target_id], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT role FROM users WHERE id = ?1",
+                params![target_id],
+                |r| r.get(0),
+            )
             .ok();
         Ok(role.as_deref() == Some(ROLE_OWNER))
     })?;
