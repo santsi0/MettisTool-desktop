@@ -7,6 +7,7 @@
 pub mod audit;
 pub mod auth;
 pub mod backup;
+pub mod cloud;
 pub mod commands;
 pub mod db;
 pub mod discord;
@@ -16,6 +17,7 @@ pub mod rbac;
 pub mod secrets;
 pub mod settings;
 pub mod state;
+pub mod supabase;
 pub mod util;
 
 use state::AppState;
