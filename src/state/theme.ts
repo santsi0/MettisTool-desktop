@@ -1,4 +1,9 @@
-/** Teeman ja korostusvärin soveltaminen. Arvot tulevat käyttäjän profiilista. */
+/**
+ * Teeman ja korostusvärin soveltaminen.
+ *
+ * Versiossa 2 teema on koneen oma asetus eikä seuraa tiliä: se on puhtaasti
+ * ulkoasua, ja paikallinen valinta toimii myös ennen kirjautumista.
+ */
 
 export const THEMES = ['dark', 'darker', 'light', 'system'] as const;
 export const ACCENTS = ['crimson', 'blue', 'purple', 'green', 'orange'] as const;
@@ -36,21 +41,24 @@ export function applyTheme(theme: Theme, accent: Accent): void {
   }
 }
 
-/** Palauttaa viimeksi käytetyn teeman jo ennen kirjautumista, jotta ruutu ei välähdä. */
-export function restoreTheme(): void {
-  let theme: Theme = 'dark';
-  let accent: Accent = 'crimson';
+/** Viimeksi valittu teema. Luetaan ennen ensimmäistä piirtoa, jottei ruutu välähdä. */
+export function loadThemePrefs(): { theme: string; accent: string } {
   try {
     const saved = localStorage.getItem(STORAGE);
     if (saved) {
-      const [th, ac] = saved.split('|');
-      if ((THEMES as readonly string[]).includes(th)) theme = th as Theme;
-      if ((ACCENTS as readonly string[]).includes(ac)) accent = ac as Accent;
+      const [theme, accent] = saved.split('|');
+      return { theme: theme ?? 'dark', accent: accent ?? 'crimson' };
     }
   } catch {
     /* oletukset riittävät */
   }
-  applyTheme(theme, accent);
+  return { theme: 'dark', accent: 'crimson' };
+}
+
+/** Soveltaa tallennetun teeman heti sovelluksen käynnistyessä. */
+export function restoreTheme(): void {
+  const { theme, accent } = loadThemePrefs();
+  applyTheme(isTheme(theme) ? theme : 'dark', isAccent(accent) ? accent : 'crimson');
 }
 
 export function isTheme(v: string): v is Theme {

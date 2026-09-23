@@ -87,6 +87,20 @@ impl Cloud {
         self.snapshot().is_some()
     }
 
+    /// Kirjautuneen käyttäjän Supabase-UUID. Käytetään paikallisen
+    /// työkaludatan avaimena, ei oikeustarkistuksiin.
+    pub fn user_id(&self) -> Option<String> {
+        self.snapshot().map(|s| s.user_id)
+    }
+
+    /// Kirjautumisruudun tarvitsemat liput ennen kirjautumista.
+    /// Vastaa `public_status()`-funktiota, joka ei paljasta yhtään riviä.
+    pub async fn public_status(&self) -> AppResult<serde_json::Value> {
+        self.client
+            .rpc_anon("public_status", &serde_json::json!({}))
+            .await
+    }
+
     /// Palauttaa voimassa olevan pääsytokenin ja uusii sen tarvittaessa.
     ///
     /// Lukko otetaan ja vapautetaan ennen jokaista `await`ia — muuten tästä

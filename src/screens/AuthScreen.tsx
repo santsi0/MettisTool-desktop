@@ -1,347 +1,101 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { auth, errorKey, isAppError } from '@/api';
-import { useI18n } from '@/i18n';
-import { usePasswordPolicy, usePasswordStrength } from '@/lib/hooks';
+/**
+ * Kirjautuminen, rekisteröityminen ja salasanan palautus.
+ *
+ * Kaikki tilit ovat palvelimella, joten näkymä tarvitsee verkkoyhteyden.
+ * Ilman sitä näytetään yhteysvirhe eikä lomaketta, joka ei voisi toimia.
+ * Salasanan vahvuus lasketaan paikallisesti — salasana ei lähde verkkoon
+ * ennen kuin lomake lähetetään.
+ */
+import { useEffect, useRef, useState } from 'react';
+import { auth, errorKey } from '@/api';
+import type { PasswordPolicy } from '@/api';
+import { useI18n, useT } from '@/i18n';
 import { useSession } from '@/state/session';
-import { Alert, Button, Check, Field, Form, GoogleMark, Input, PasswordInput } from '@/ui';
+import { useToast } from '@/state/toast';
+import { Alert, Button, Field, Form, Input, PasswordInput, Switch } from '@/ui';
 import { AuthLayout, PasswordMeter } from './AuthLayout';
 
-type Mode = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'invite' | 'twoFactor';
+type Mode = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
-const POLL_MS = 1200;
+const STRENGTH_DELAY = 250;
 
 export function AuthScreen() {
-  const { t } = useI18n();
+  const t = useT();
+  const { lang } = useI18n();
+  const toast = useToast();
   const { status, setSession, refreshStatus } = useSession();
-  const policy = usePasswordPolicy();
 
   const [mode, setMode] = useState<Mode>('login');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [code, setCode] = useState('');
-  const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [policy, setPolicy] = useState<PasswordPolicy | null>(null);
+  const [score, setScore] = useState<number | null>(null);
 
-  const strength = usePasswordStrength(password);
-  const pollRef = useRef<number>();
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [code, setCode] = useState('');
+  const [remember, setRemember] = useState(true);
 
-  const stopPoll = useCallback(() => {
-    window.clearInterval(pollRef.current);
-    pollRef.current = undefined;
-    setGoogleBusy(false);
+  const strengthTimer = useRef<number>();
+
+  useEffect(() => {
+    void auth.passwordPolicy().then(setPolicy, () => undefined);
+    return () => window.clearTimeout(strengthTimer.current);
   }, []);
-
-  useEffect(() => () => window.clearInterval(pollRef.current), []);
-
-  const fail = (e: unknown) => {
-    setError(t(errorKey(e), isAppError(e) && e.retryAfter ? { n: e.retryAfter } : undefined));
-  };
 
   const go = (next: Mode) => {
     setMode(next);
     setError('');
-    setNotice('');
     setCode('');
-    if (next !== 'reset' && next !== 'invite') setPassword('');
-    setConfirm('');
   };
 
-  /* ---------- Toiminnot ---------- */
-
-  const doLogin = () => {
+  const run = (fn: () => Promise<void>) => {
     setBusy(true);
     setError('');
-    void auth
-      .login({ email: email.trim(), password, remember })
-      .then((res) => {
-        if (res.status === 'ok') {
-          setSession(res.session);
-        } else {
-          setPassword('');
-          go('twoFactor');
-        }
-      })
-      .catch(fail)
+    void fn()
+      .catch((e: unknown) => setError(t(errorKey(e))))
       .finally(() => setBusy(false));
   };
 
-  const doTwoFactor = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .loginTwoFactor(code.trim())
-      .then(setSession)
-      .catch((e) => {
-        setCode('');
-        fail(e);
-      })
-      .finally(() => setBusy(false));
+  /** Vahvuus lasketaan vasta kirjoittamisen tauottua, ei joka näppäimestä. */
+  const onPassword = (value: string) => {
+    setPassword(value);
+    window.clearTimeout(strengthTimer.current);
+    if (!value) {
+      setScore(null);
+      return;
+    }
+    strengthTimer.current = window.setTimeout(() => {
+      void auth.passwordStrength(value).then((s) => setScore(s.score), () => undefined);
+    }, STRENGTH_DELAY);
   };
 
-  const doRegister = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .register({ username: username.trim(), email: email.trim(), password, passwordConfirm: confirm })
-      .then((res) => {
-        if (res.requiresVerification) {
-          setNotice(res.emailSent ? '' : t('auth.emailNotConfigured'));
-          setPassword('');
-          setConfirm('');
-          setMode('verify');
-          setError('');
-        } else {
-          go('login');
-          setNotice(t('auth.verified'));
-        }
-      })
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
+  const passwordHint = policy ? t('auth.passwordRules', { n: policy.minLength }) : '';
+  const strengthLabel = score ? t(`auth.strength${score}`) : '';
+  const errorAlert = error ? <Alert kind="err">{error}</Alert> : null;
+  const noticeAlert = notice ? <Alert kind="info">{notice}</Alert> : null;
 
-  const doVerify = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .verifyEmail(code.trim())
-      .then(() => {
-        go('login');
-        setNotice(t('auth.verified'));
-      })
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
-
-  const doResend = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .resendVerification(email.trim())
-      .then(() => setNotice(t('auth.resendSent')))
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
-
-  const doForgot = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .requestPasswordReset(email.trim())
-      .then(() => {
-        setMode('reset');
-        setNotice(t('auth.resetSent'));
-      })
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
-
-  const doReset = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .resetPassword(code.trim(), password)
-      .then(() => {
-        go('login');
-        setNotice(t('auth.resetDone'));
-      })
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
-
-  const doInvite = () => {
-    setBusy(true);
-    setError('');
-    void auth
-      .acceptInvite(code.trim(), password)
-      .then(() => {
-        go('login');
-        setNotice(t('auth.resetDone'));
-      })
-      .catch(fail)
-      .finally(() => setBusy(false));
-  };
-
-  const doGoogle = () => {
-    setError('');
-    setGoogleBusy(true);
-    void auth
-      .googleBegin(false)
-      .then(async (url) => {
-        await openUrl(url);
-        pollRef.current = window.setInterval(() => {
-          void auth
-            .googlePoll()
-            .then((res) => {
-              if (res.status === 'ready') {
-                stopPoll();
-                if (res.session) setSession(res.session);
-              } else if (res.status === 'failed') {
-                stopPoll();
-                setError(t('err.oauth_failed'));
-              }
-            })
-            .catch((e) => {
-              stopPoll();
-              fail(e);
-            });
-        }, POLL_MS);
-      })
-      .catch((e) => {
-        setGoogleBusy(false);
-        fail(e);
-      });
-  };
-
-  const cancelGoogle = () => {
-    stopPoll();
-    void auth.googleCancel().catch(() => undefined);
-  };
-
-  useEffect(() => {
-    if (mode === 'login') void refreshStatus().catch(() => undefined);
-  }, [mode, refreshStatus]);
-
-  /* ---------- Näkymät ---------- */
-
-  const banner = (
-    <>
-      {notice ? <Alert kind="ok">{notice}</Alert> : null}
-      {error ? <Alert kind="err">{error}</Alert> : null}
-    </>
+  const head = (title: string, lead: string) => (
+    <div>
+      <h1>{title}</h1>
+      <p className="lead">{lead}</p>
+    </div>
   );
 
-  const passwordField = (label: string) => (
-    <>
-      <Field label={label} hint={policy ? t('auth.passwordRules', { n: policy.minLength }) : undefined}>
-        <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-      </Field>
-      <PasswordMeter score={strength?.score ?? null} label={strength ? t(`auth.strength${strength.score}`) : ''} />
-    </>
-  );
-
-  const codeField = (label: string) => (
-    <Field label={label} hint={t('auth.codeHint')}>
-      <Input
-        className="code-input"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        autoFocus
-        maxLength={24}
-        inputMode="text"
-        spellCheck={false}
-      />
-    </Field>
-  );
-
-  if (mode === 'twoFactor') {
+  // Ilman yhteyttä kirjautumislomakkeen näyttäminen olisi harhaanjohtavaa:
+  // tilit, roolit ja asetukset ovat palvelimella.
+  if (status && !status.online) {
     return (
       <AuthLayout>
         <div className="auth-card">
-          <div>
-            <h1>{t('auth.twoFactorTitle')}</h1>
-            <p className="lead">{t('auth.twoFactorSub')}</p>
-          </div>
-          <Form onSubmit={doTwoFactor}>
-            {codeField(t('auth.twoFactorCode'))}
-            <span className="hint">{t('auth.recoveryHint')}</span>
-            {banner}
-            <Button type="submit" variant="primary" size="lg" block busy={busy} disabled={code.trim().length < 6}>
-              {t('auth.login')}
-            </Button>
-          </Form>
-          <div className="auth-foot">
-            <button className="link" onClick={() => go('login')}>{t('auth.backToLogin')}</button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  if (mode === 'verify') {
-    return (
-      <AuthLayout>
-        <div className="auth-card">
-          <div>
-            <h1>{t('auth.verifyTitle')}</h1>
-            <p className="lead">{t('auth.verifySub', { email: email.trim() })}</p>
-          </div>
-          <Form onSubmit={doVerify}>
-            {codeField(t('auth.verifyCode'))}
-            {banner}
-            <Button type="submit" variant="primary" size="lg" block busy={busy} disabled={code.trim().length < 4}>
-              {t('auth.verify')}
-            </Button>
-          </Form>
-          <div className="auth-foot">
-            <button className="link" onClick={doResend} disabled={busy}>{t('auth.resend')}</button>
-            <span>·</span>
-            <button className="link" onClick={() => go('login')}>{t('auth.backToLogin')}</button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  if (mode === 'forgot') {
-    return (
-      <AuthLayout>
-        <div className="auth-card">
-          <div>
-            <h1>{t('auth.resetTitle')}</h1>
-            <p className="lead">{t('auth.resetSub')}</p>
-          </div>
-          <Form onSubmit={doForgot}>
-            <Field label={t('auth.email')}>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus autoComplete="email" />
-            </Field>
-            {banner}
-            <Button type="submit" variant="primary" size="lg" block busy={busy} disabled={email.trim() === ''}>
-              {t('auth.resetRequest')}
-            </Button>
-          </Form>
-          <div className="auth-foot">
-            <button className="link" onClick={() => go('reset')}>{t('auth.resetCode')}</button>
-            <span>·</span>
-            <button className="link" onClick={() => go('login')}>{t('auth.backToLogin')}</button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  if (mode === 'reset' || mode === 'invite') {
-    const invite = mode === 'invite';
-    return (
-      <AuthLayout>
-        <div className="auth-card">
-          <div>
-            <h1>{t(invite ? 'auth.inviteTitle' : 'auth.resetTitle')}</h1>
-            <p className="lead">{t(invite ? 'auth.inviteSub' : 'auth.resetSub')}</p>
-          </div>
-          <Form onSubmit={invite ? doInvite : doReset}>
-            {codeField(t(invite ? 'auth.inviteCode' : 'auth.resetCode'))}
-            {passwordField(t('auth.newPassword'))}
-            {banner}
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              block
-              busy={busy}
-              disabled={code.trim().length < 4 || password === ''}
-            >
-              {t('auth.resetSubmit')}
-            </Button>
-          </Form>
-          <div className="auth-foot">
-            <button className="link" onClick={() => go('login')}>{t('auth.backToLogin')}</button>
-          </div>
+          {head(t('auth.offlineTitle'), t('auth.offlineSub'))}
+          <Alert kind="err">{t('auth.offlineHelp')}</Alert>
+          <Button block busy={busy} variant="primary" onClick={() => run(refreshStatus)}>
+            {t('common.retry')}
+          </Button>
         </div>
       </AuthLayout>
     );
@@ -351,112 +105,288 @@ export function AuthScreen() {
     return (
       <AuthLayout>
         <div className="auth-card">
-          <div>
-            <h1>{t('auth.registerTitle')}</h1>
-            <p className="lead">{t('auth.registerSub')}</p>
-          </div>
-          <Form onSubmit={doRegister}>
+          {head(t('auth.registerTitle'), t('auth.registerSub'))}
+          <Form
+            onSubmit={() =>
+              run(async () => {
+                const res = await auth.register({
+                  username,
+                  email,
+                  password,
+                  passwordConfirm,
+                  language: lang
+                });
+                setEmail(res.email);
+                setPassword('');
+                setPasswordConfirm('');
+                setScore(null);
+                if (res.requiresVerification) {
+                  setNotice(t('auth.verifySent'));
+                  go('verify');
+                } else {
+                  toast.ok(t('auth.verified'));
+                  go('login');
+                }
+              })
+            }
+          >
+            {errorAlert}
+            {status && !status.registrationEnabled ? (
+              <Alert kind="warn">{t('auth.registrationDisabled')}</Alert>
+            ) : null}
+
             <Field label={t('auth.username')}>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus autoComplete="username" maxLength={32} />
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                autoComplete="username"
+                maxLength={32}
+              />
             </Field>
             <Field label={t('auth.email')}>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" maxLength={254} />
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoComplete="email"
+              />
             </Field>
-            {passwordField(t('auth.password'))}
+            <Field label={t('auth.password')} hint={passwordHint}>
+              <PasswordInput
+                value={password}
+                onChange={(e) => onPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <PasswordMeter score={score} label={strengthLabel} />
+            </Field>
             <Field label={t('auth.passwordConfirm')}>
-              <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+              <PasswordInput
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
             </Field>
-            {banner}
+
             <Button
               type="submit"
               variant="primary"
-              size="lg"
               block
               busy={busy}
-              disabled={username.trim() === '' || email.trim() === '' || password === '' || confirm === ''}
+              disabled={!status?.registrationEnabled}
             >
               {t('auth.register')}
             </Button>
           </Form>
-          <div className="auth-foot">
-            <span>{t('auth.haveAccount')}</span>
-            <button className="link" onClick={() => go('login')}>{t('auth.login')}</button>
-          </div>
+        </div>
+        <div className="auth-foot">
+          <span>{t('auth.haveAccount')}</span>
+          <button type="button" className="link" onClick={() => go('login')}>
+            {t('auth.login')}
+          </button>
         </div>
       </AuthLayout>
     );
   }
 
-  /* ---------- Kirjautuminen ---------- */
+  if (mode === 'verify') {
+    return (
+      <AuthLayout>
+        <div className="auth-card">
+          {head(t('auth.verifyTitle'), t('auth.verifySub', { email }))}
+          <Form
+            onSubmit={() =>
+              run(async () => {
+                setSession(await auth.verifyEmail(email, code));
+              })
+            }
+          >
+            {errorAlert}
+            {noticeAlert}
 
-  const googleAvailable = status?.googleLoginEnabled && status.googleConfigured;
+            <Field label={t('auth.verifyCode')} hint={t('auth.codeHint')}>
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={10}
+              />
+            </Field>
+
+            <Button type="submit" variant="primary" block busy={busy}>
+              {t('auth.verify')}
+            </Button>
+          </Form>
+        </div>
+        <div className="auth-foot">
+          <button
+            type="button"
+            className="link"
+            onClick={() =>
+              run(async () => {
+                await auth.resendVerification(email);
+                setNotice(t('auth.resendSent'));
+              })
+            }
+          >
+            {t('auth.resend')}
+          </button>
+          <span>·</span>
+          <button type="button" className="link" onClick={() => go('login')}>
+            {t('auth.backToLogin')}
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <AuthLayout>
+        <div className="auth-card">
+          {head(t('auth.resetTitle'), t('auth.resetSub'))}
+          <Form
+            onSubmit={() =>
+              run(async () => {
+                await auth.requestPasswordReset(email);
+                setNotice(t('auth.resetSent'));
+                go('reset');
+              })
+            }
+          >
+            {errorAlert}
+            <Field label={t('auth.email')}>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoFocus
+                autoComplete="email"
+              />
+            </Field>
+            <Button type="submit" variant="primary" block busy={busy}>
+              {t('auth.resetRequest')}
+            </Button>
+          </Form>
+        </div>
+        <div className="auth-foot">
+          <button type="button" className="link" onClick={() => go('login')}>
+            {t('auth.backToLogin')}
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (mode === 'reset') {
+    return (
+      <AuthLayout>
+        <div className="auth-card">
+          {head(t('auth.resetTitle'), t('auth.resetSubmit'))}
+          <Form
+            onSubmit={() =>
+              run(async () => {
+                await auth.resetPassword(email, code, password);
+                toast.ok(t('auth.resetDone'));
+                setPassword('');
+                setScore(null);
+                go('login');
+              })
+            }
+          >
+            {errorAlert}
+            {noticeAlert}
+
+            <Field label={t('auth.resetCode')} hint={t('auth.codeHint')}>
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={10}
+              />
+            </Field>
+            <Field label={t('auth.newPassword')} hint={passwordHint}>
+              <PasswordInput
+                value={password}
+                onChange={(e) => onPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <PasswordMeter score={score} label={strengthLabel} />
+            </Field>
+
+            <Button type="submit" variant="primary" block busy={busy}>
+              {t('auth.resetSubmit')}
+            </Button>
+          </Form>
+        </div>
+        <div className="auth-foot">
+          <button type="button" className="link" onClick={() => go('login')}>
+            {t('auth.backToLogin')}
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>
       <div className="auth-card">
-        <div>
-          <h1>{t('auth.signInTitle')}</h1>
-          <p className="lead">{t('auth.signInSub')}</p>
-        </div>
+        {head(t('auth.signInTitle'), t('auth.signInSub'))}
+        <Form
+          onSubmit={() =>
+            run(async () => {
+              setSession(await auth.login({ email, password, remember }));
+            })
+          }
+        >
+          {errorAlert}
+          {noticeAlert}
 
-        {googleBusy ? (
-          <>
-            <Alert kind="info">{t('auth.googleWait')}</Alert>
-            <span className="hint">{t('auth.googleHint')}</span>
-            {error ? <Alert kind="err">{error}</Alert> : null}
-            <Button block onClick={cancelGoogle}>{t('auth.googleCancel')}</Button>
-          </>
-        ) : (
-          <>
-            <Form onSubmit={doLogin}>
-              <Field label={t('auth.email')}>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus autoComplete="username" />
-              </Field>
-              <Field label={t('auth.password')}>
-                <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
-              </Field>
-              <div className="row">
-                <Check checked={remember} onChange={setRemember} label={t('auth.remember')} />
-                <button type="button" className="link right" onClick={() => go('forgot')}>
-                  {t('auth.forgot')}
-                </button>
-              </div>
-              {banner}
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                block
-                busy={busy}
-                disabled={email.trim() === '' || password === ''}
-              >
-                {t('auth.login')}
-              </Button>
-            </Form>
+          <Field label={t('auth.email')}>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              autoFocus
+              autoComplete="email"
+            />
+          </Field>
+          <Field label={t('auth.password')}>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </Field>
 
-            {googleAvailable ? (
-              <>
-                <div className="auth-sep">{t('auth.or')}</div>
-                <button type="button" className="btn block google-btn" onClick={doGoogle}>
-                  <GoogleMark />
-                  {t('auth.google')}
-                </button>
-                <span className="hint" style={{ textAlign: 'center' }}>{t('auth.googleHint')}</span>
-              </>
-            ) : null}
-          </>
-        )}
+          <div className="toggle-row">
+            <div className="tr-txt">
+              <strong>{t('auth.remember')}</strong>
+            </div>
+            <Switch checked={remember} onChange={setRemember} label={t('auth.remember')} />
+          </div>
+
+          <Button type="submit" variant="primary" block busy={busy}>
+            {t('auth.login')}
+          </Button>
+        </Form>
       </div>
-
       <div className="auth-foot">
+        <button type="button" className="link" onClick={() => go('forgot')}>
+          {t('auth.forgot')}
+        </button>
         {status?.registrationEnabled ? (
           <>
-            <span>{t('auth.noAccount')}</span>
-            <button className="link" onClick={() => go('register')}>{t('auth.register')}</button>
             <span>·</span>
+            <button type="button" className="link" onClick={() => go('register')}>
+              {t('auth.register')}
+            </button>
           </>
         ) : null}
-        <button className="link" onClick={() => go('invite')}>{t('auth.haveInvite')}</button>
       </div>
     </AuthLayout>
   );

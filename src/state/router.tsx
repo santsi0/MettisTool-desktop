@@ -6,10 +6,7 @@ export type Route =
   | { name: 'tool'; id: string }
   | { name: 'category'; id: string }
   | { name: 'favorites' }
-  | { name: 'recent' }
-  | { name: 'account' }
-  | { name: 'settings' }
-  | { name: 'admin'; tab: string };
+  | { name: 'recent' };
 
 const HOME: Route = { name: 'home' };
 
@@ -21,9 +18,6 @@ export function parseHash(hash: string): Route {
     case 'm': return arg ? { name: 'category', id: arg } : HOME;
     case 'suosikit': return { name: 'favorites' };
     case 'viimeisimmat': return { name: 'recent' };
-    case 'tili': return { name: 'account' };
-    case 'asetukset': return { name: 'settings' };
-    case 'hallinta': return { name: 'admin', tab: arg || 'overview' };
     default: return HOME;
   }
 }
@@ -34,9 +28,6 @@ export function toHash(r: Route): string {
     case 'category': return `#/m/${encodeURIComponent(r.id)}`;
     case 'favorites': return '#/suosikit';
     case 'recent': return '#/viimeisimmat';
-    case 'account': return '#/tili';
-    case 'settings': return '#/asetukset';
-    case 'admin': return `#/hallinta/${r.tab}`;
     default: return '#/koti';
   }
 }

@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import { Account } from '@/screens/Account';
-import { Admin } from '@/screens/admin/Admin';
 import { Dashboard, ToolList } from '@/screens/Dashboard';
-import { Settings } from '@/screens/Settings';
 import { ToolView } from '@/screens/ToolView';
 import { useRouter } from '@/state/router';
 import { ToolsProvider } from '@/state/tools';
@@ -24,9 +21,6 @@ export function Shell() {
           {route.name === 'category' ? <ToolList kind="category" key={route.id} /> : null}
           {route.name === 'favorites' ? <ToolList kind="favorites" /> : null}
           {route.name === 'recent' ? <ToolList kind="recent" /> : null}
-          {route.name === 'account' ? <Account /> : null}
-          {route.name === 'settings' ? <Settings /> : null}
-          {route.name === 'admin' ? <Admin tab={route.tab} /> : null}
         </main>
       </div>
     </ToolsProvider>

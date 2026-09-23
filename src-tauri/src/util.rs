@@ -1,39 +1,21 @@
-//! Pienet apufunktiot: aika, satunnaisuus, tiivisteet, validointi ja peittäminen.
+//! Pienet apufunktiot: aika, satunnaisuus, validointi ja peittäminen.
+//!
+//! Salasanojen tiivistys ja tokenien vertailu hoidetaan versiossa 2
+//! palvelimella, joten niiden apufunktiot on poistettu täältä.
 
 use crate::error::{AppError, AppResult};
 use base64::Engine as _;
 use rand::RngCore;
-use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 
 pub fn now() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
-pub fn random_bytes(n: usize) -> Vec<u8> {
-    let mut buf = vec![0u8; n];
-    rand::rngs::OsRng.fill_bytes(&mut buf);
-    buf
-}
-
 /// URL-turvallinen satunnaistoken (ei täytemerkkejä).
 pub fn random_token(bytes: usize) -> String {
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random_bytes(bytes))
-}
-
-pub fn sha256_hex(input: &str) -> String {
-    let digest = Sha256::digest(input.as_bytes());
-    digest.iter().map(|b| format!("{b:02x}")).collect()
-}
-
-/// Vakioaikainen vertailu — estää ajoitushyökkäykset tokenien vertailussa.
-pub fn ct_eq(a: &str, b: &str) -> bool {
-    let (a, b) = (a.as_bytes(), b.as_bytes());
-    if a.len() != b.len() {
-        // Pituusero paljastuu joka tapauksessa; tärkeintä on sisällön vakioaikaisuus.
-        return false;
-    }
-    a.ct_eq(b).into()
+    let mut buf = vec![0u8; bytes];
+    rand::rngs::OsRng.fill_bytes(&mut buf);
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buf)
 }
 
 /// Peittää salaisuuden lokeja ja käyttöliittymää varten: "sk_live_…a93f".

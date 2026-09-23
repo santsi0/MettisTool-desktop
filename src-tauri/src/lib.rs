@@ -4,20 +4,13 @@
 //! Kaikki tunnistautuminen, oikeustarkistukset, tietokanta ja salaisuudet ovat
 //! tässä Rust-kerroksessa, johon frontend pääsee vain määriteltyjen komentojen kautta.
 
-pub mod audit;
-pub mod auth;
-pub mod backup;
 pub mod cloud;
 pub mod commands;
-pub mod db;
-pub mod discord;
-pub mod email;
 pub mod error;
-pub mod rbac;
 pub mod secrets;
-pub mod settings;
 pub mod state;
 pub mod supabase;
+pub mod toolstore;
 pub mod util;
 
 use state::AppState;
@@ -60,16 +53,6 @@ impl log::Log for SimpleLogger {
     fn flush(&self) {}
 }
 
-/// Taustasiivous: vanhentuneet istunnot, tokenit ja kutsurajoitukset.
-fn spawn_maintenance(db: std::sync::Arc<db::Db>) {
-    std::thread::spawn(move || loop {
-        auth::session::cleanup(&db);
-        let _ = auth::tokens::cleanup(&db);
-        auth::ratelimit::cleanup(&db);
-        std::thread::sleep(std::time::Duration::from_secs(3_600));
-    });
-}
-
 fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
@@ -92,7 +75,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             }
             "logout" => {
                 let state = app.state::<AppState>();
-                let _ = auth::logout(&state);
+                let cloud = state.cloud.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = cloud.sign_out().await;
+                });
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.show();
                     let _ = w.set_focus();
@@ -147,139 +133,52 @@ pub fn run() {
 
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let db_path = data_dir.join("mettistool.db");
 
-            let database = db::Db::open(&db_path).map_err(|e| {
-                log::error!("tietokantaa ei voitu avata: {e}");
-                std::io::Error::new(std::io::ErrorKind::Other, "tietokantavirhe")
+            // Paikallinen tietokanta sisältää vain työkalujen oman datan.
+            // Tilit, roolit ja audit-loki ovat Supabasessa.
+            let tools =
+                toolstore::ToolStore::open(&data_dir.join("mettistool-tools.db")).map_err(|e| {
+                    log::error!("työkalutietokantaa ei voitu avata: {e}");
+                    std::io::Error::other("tietokantavirhe")
+                })?;
+
+            let cloud = cloud::Cloud::new().map_err(|e| {
+                log::error!("pilviasiakasta ei voitu luoda: {e}");
+                std::io::Error::other("verkkovirhe")
             })?;
 
-            let state = AppState::new(database);
-            let db_arc = state.db.clone();
-            app.manage(state);
-
-            spawn_maintenance(db_arc.clone());
-
-            // Automaattinen varmuuskopio käynnistyksessä (enintään kerran vuorokaudessa).
-            if settings::get_bool(&db_arc, settings::AUTO_BACKUP) {
-                let last: i64 = db_arc
-                    .with(|c| {
-                        Ok(c.query_row(
-                            "SELECT IFNULL(MAX(created_at), 0) FROM backups WHERE kind = 'AUTO'",
-                            [],
-                            |r| r.get(0),
-                        )?)
-                    })
-                    .unwrap_or(0);
-                if util::now() - last > 86_400 {
-                    let dir = data_dir.clone();
-                    let db2 = db_arc.clone();
-                    std::thread::spawn(move || {
-                        if let Err(e) = backup::create(&db2, &dir, "AUTO", None) {
-                            log::warn!("automaattinen varmuuskopio epäonnistui: {e}");
-                        }
-                    });
-                }
-            }
+            app.manage(AppState::new(cloud, tools));
 
             if let Err(e) = setup_tray(&handle) {
                 log::warn!("ilmaisinalueen kuvaketta ei voitu alustaa: {e}");
             }
 
-            audit::log(
-                &db_arc,
-                audit::Event::new("APP_STARTED", audit::CAT_SYSTEM)
-                    .meta(serde_json::json!({ "version": util::app_version() })),
-            );
-
+            log::info!("MettisTool {} kaynnistyi", util::app_version());
             Ok(())
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                let app = window.app_handle();
-                let state = app.state::<AppState>();
-                if settings::get_bool(&state.db, settings::MINIMIZE_TO_TRAY) {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
+                // Sulkeminen piilottaa ikkunan ilmaisinalueelle; lopetus tapahtuu
+                // ilmaisinalueen valikosta.
+                api.prevent_close();
+                let _ = window.hide();
             }
         })
         .invoke_handler(tauri::generate_handler![
             // Tunnistautuminen
             commands::auth::app_status,
-            commands::auth::setup_owner,
             commands::auth::register,
+            commands::auth::verify_email,
+            commands::auth::resend_verification,
             commands::auth::login,
-            commands::auth::login_two_factor,
             commands::auth::logout,
             commands::auth::restore_session,
             commands::auth::current_session,
-            commands::auth::verify_email,
-            commands::auth::resend_verification,
+            commands::auth::forget_remembered_session,
             commands::auth::request_password_reset,
             commands::auth::reset_password,
-            commands::auth::accept_invite,
             commands::auth::password_policy,
             commands::auth::password_strength,
-            commands::auth::google_begin,
-            commands::auth::google_poll,
-            commands::auth::google_cancel,
-            commands::auth::google_unlink,
-            commands::auth::login_methods,
-            commands::auth::forget_remembered_session,
-            // Oma tili
-            commands::account::account_profile,
-            commands::account::update_preferences,
-            commands::account::change_password,
-            commands::account::change_email,
-            commands::account::change_username,
-            commands::account::two_factor_begin,
-            commands::account::two_factor_enable,
-            commands::account::two_factor_disable,
-            commands::account::two_factor_recovery_codes,
-            commands::account::two_factor_status,
-            commands::account::account_sessions,
-            commands::account::revoke_session,
-            commands::account::revoke_other_sessions,
-            commands::account::export_my_data,
-            commands::account::delete_my_account,
-            // Hallinta
-            commands::admin::admin_stats,
-            commands::admin::list_users,
-            commands::admin::get_user,
-            commands::admin::admin_create_user,
-            commands::admin::set_user_role,
-            commands::admin::set_user_status,
-            commands::admin::set_user_lock,
-            commands::admin::verify_user_email,
-            commands::admin::admin_send_verification,
-            commands::admin::admin_reset_password,
-            commands::admin::force_password_change,
-            commands::admin::revoke_user_sessions,
-            commands::admin::delete_user,
-            commands::admin::list_permissions,
-            commands::admin::set_user_permission,
-            commands::admin::audit_list,
-            commands::admin::audit_export,
-            commands::admin::audit_prune,
-            commands::admin::email_status,
-            commands::admin::email_configure,
-            commands::admin::email_clear_key,
-            commands::admin::email_test,
-            commands::admin::discord_status,
-            commands::admin::discord_configure,
-            commands::admin::discord_clear,
-            commands::admin::discord_test,
-            commands::admin::google_status,
-            commands::admin::google_configure,
-            commands::admin::google_clear,
-            commands::admin::get_settings,
-            commands::admin::set_setting,
-            commands::admin::system_info,
-            commands::admin::backup_list,
-            commands::admin::backup_create,
-            commands::admin::backup_restore,
-            commands::admin::database_stats,
             // Työkalut
             commands::tools::tool_state_get,
             commands::tools::tool_state_set,
@@ -293,8 +192,6 @@ pub fn run() {
             commands::system::app_ready,
             commands::system::window_minimize_to_tray,
             commands::system::open_data_folder,
-            commands::system::notifications_list,
-            commands::system::notifications_mark_read,
             commands::system::check_updates,
             commands::system::set_autostart,
             commands::system::autostart_enabled,

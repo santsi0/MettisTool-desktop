@@ -451,6 +451,21 @@ impl Client {
         Ok(())
     }
 
+    /// Kutsuu funktiota ilman istuntoa. Vain `public_status()` on sallittu
+    /// anonille — muut torjutaan tietokannassa.
+    pub async fn rpc_anon<T: DeserializeOwned>(
+        &self,
+        function: &str,
+        args: &serde_json::Value,
+    ) -> AppResult<T> {
+        self.send(
+            self.http
+                .post(self.rest(&format!("rpc/{function}")))
+                .json(args),
+        )
+        .await
+    }
+
     /// Kutsuu tietokannan funktiota. Kaikki oikeustarkistukset tehdään siellä.
     pub async fn rpc<T: DeserializeOwned>(
         &self,
